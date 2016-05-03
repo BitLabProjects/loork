@@ -124,11 +124,11 @@ namespace loork_gui
               {
                 samplesPtr -= screenWidth / 2;
                 var samplesPtrEnd = samplesPtr + screenWidth;
-                var prevConditionedSample = (*samplesPtr++) * signalScale;
+                var prevConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
                 var x = 0;
                 while (samplesPtr < samplesPtrEnd - 1)
                 {
-                  var currConditionedSample = (*samplesPtr++) * signalScale;
+                  var currConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
                   x++;
                   mLine(screenPtrStart, x - 1, (int)prevConditionedSample, x, (int)currConditionedSample);
                   prevConditionedSample = currConditionedSample;
@@ -187,7 +187,7 @@ namespace loork_gui
 
     private unsafe void mLine(byte* screenPtrStart, int x1, int y1, int x2, int y2)
     {
-      var swap = 0;
+      var swap = false;
       var DX = x2 - x1;
       var DY = y2 - y1;
 
@@ -198,50 +198,48 @@ namespace loork_gui
         var tmp = DX;
         DX = DY;
         DY = tmp;
-        swap = 1;
+        swap = true;
       }
 
       //per non scrivere sempre i valori assoluti cambio DY e DX con altre variabili
-      var a = Math.Abs(DY);
+      var a = 2 * Math.Abs(DY);
       var b = -Math.Abs(DX);
 
       //il nostro valore d0
-      var d = 2 * a + b;
+      var d = a + b;
+      var dOverflowIncrement = a + 2 * b;
 
       //s e q sono gli incrementi/decrementi di x e y
-      var q = 1;
-      var s = 1;
-      if (x1 > x2) q = -1;
-      if (y1 > y2) s = -1;
-      //disegna_punto(x, y);
-      *(screenPtrStart + x1 * screenHeight + y1) = 0;
-      //disegna_punto(x2, y2);
-      *(screenPtrStart + x2 * screenHeight + y2) = 0;
+      var xIncrement = screenHeight;
+      var yIncrement = 1;
+      if (x1 > x2) xIncrement = -xIncrement;
+      if (y1 > y2) yIncrement = -yIncrement;
+
+      var pixelPtrIncrement = swap ? yIncrement : xIncrement;
       
       //assegna le coordinate iniziali
-      var x = x1;
-      var y = y1;
+      var pixelPtr = screenPtrStart + x1 * screenHeight + y1;
+      *pixelPtr = 0;
 
       for (var k = 0; k < -b; k += 1)
       {
         if (d > 0)
         {
-          x = x + q;
-          y = y + s;
-          d = d + 2 * (a + b);
+          pixelPtr += xIncrement + yIncrement;
+          d += dOverflowIncrement;
         }
         else
         {
-          x = x + q;
-          if (swap == 1)
-          {
-            y = y + s;
-            x = x - q;
-          }
-          d = d + 2 * a;
+          pixelPtr += pixelPtrIncrement;
+          d += a;
         }
-        //disegna_punto(x, y);
-        *(screenPtrStart + x * screenHeight + y) = 0;
+
+#if DEBUG
+        if (k == -b - 1)
+          System.Diagnostics.Debug.Assert(pixelPtr == screenPtrStart + x2 * screenHeight + y2);
+#endif
+
+        *pixelPtr = 0;
       }
     }
 
