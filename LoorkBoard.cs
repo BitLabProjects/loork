@@ -12,8 +12,8 @@ namespace loork_gui
   class LoorkBoard
   {
     private SerialPort mPort;
-    private const int screenWidth = 800;
-    private const int screenHeight = 600;
+    private const int screenWidth = 400;
+    private const int screenHeight = 240;
     private bool mSyncReceived;
     private byte[] mScreenBuffer;
     private int mScreenBufferIdx;
@@ -24,7 +24,11 @@ namespace loork_gui
     const float refreshIntervalInSec = 1.0f / 30.0f;
     const int OneMillion = 1000000;
     const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
-    const int trigger = 2048;
+    const byte drawOpacity = (byte)(0.15 * 255); // 30%;
+    const int marginTopBottom = 10;
+    const int maxSignalValue = 4096;
+    private int trigger;
+    private float signalScale;
 
     public LoorkBoard(Dispatcher dispatcher)
     {
@@ -38,6 +42,7 @@ namespace loork_gui
       //mPort = new SerialPort("COM3", 115200, Parity.None, 8, StopBits.One);
       //mPort.DataReceived += mPort_DataReceived;
       //mPort.Open();
+      TriggerPercent = 50;
 
 
       mChannel = new Channel(SamplesPerSecond);
@@ -52,6 +57,8 @@ namespace loork_gui
     private Channel mChannel;
     private QueryPerfCounter counter;
     private bool isWorking = false;
+
+    public double TriggerPercent { get; set; }
 
     private void mTimer_Tick(object state)
     {
@@ -76,7 +83,8 @@ namespace loork_gui
       //Console.WriteLine("{0:0.0}", elapsedSeconds * 1000);
 
       intensity = (byte)((intensity + 1) % 255);
-      const byte drawOpacity = (byte)(0.15 * 255); // 30%;
+      signalScale = (screenHeight - 2 * marginTopBottom) / (float)maxSignalValue;
+      trigger = (int)(TriggerPercent / 100 * maxSignalValue);
 
       unsafe
       {
@@ -88,7 +96,7 @@ namespace loork_gui
           //Blank screen
           var screenPtr = screenPtrStart;
           while (screenPtr++ < screenPtrEnd)
-            *screenPtr = 255;
+            *screenPtr = 230;
 
           int channelSamplesCount;
           var channelSamples = mChannel.Capture(elapsedSeconds, out channelSamplesCount);
@@ -112,13 +120,23 @@ namespace loork_gui
             while (samplesPtr < samplesEnd)
             {
               var sample = *samplesPtr++;
-              if (sample >= trigger && Math.Abs(sample - prevSample - 100) < 5)
+              if (sample >= trigger)// && Math.Abs(sample - prevSample - 100) < 5)
               {
                 samplesPtr -= screenWidth / 2;
-                screenPtr = screenPtrStart + 50;
-                var signalScale = (screenHeight - 100) / 4096f;
+                var samplesPtrEnd = samplesPtr + screenWidth;
                 var prevConditionedSample = (*samplesPtr++) * signalScale;
-                while (screenPtr < screenPtrEnd)
+                var x = 0;
+                while (samplesPtr < samplesPtrEnd - 1)
+                {
+                  var currConditionedSample = (*samplesPtr++) * signalScale;
+                  x++;
+                  mLine(screenPtrStart, x - 1, (int)prevConditionedSample, x, (int)currConditionedSample);
+                  prevConditionedSample = currConditionedSample;
+                }
+                /*
+                screenPtr = screenPtrStart + marginTopBottom;
+                var prevConditionedSample = (*samplesPtr++) * signalScale;
+                while (screenPtr < screenPtrEnd - screenHeight)
                 {
                   var currConditionedSample = (*samplesPtr++) * signalScale;
                   var delta = currConditionedSample - prevConditionedSample;
@@ -142,11 +160,11 @@ namespace loork_gui
                   //Last point (or only point if prevCondSample==currCondSample
                   var value = *currPtr;
                   *currPtr = value > drawOpacity ? (byte)(value - drawOpacity) : (byte)0;
-                  //*(screenPtr + (int)currConditionedSample) = 0;
 
                   screenPtr += screenHeight;
                   prevConditionedSample = currConditionedSample;
                 }
+                */
 
                 while (samplesPtr < samplesEnd)
                 {
@@ -158,11 +176,83 @@ namespace loork_gui
               prevSample = sample;
             }
           }
+
+          mDrawTriggerLine(screenPtrStart, screenPtrEnd);
         }
       }
 
       mDispatcher.Invoke(() => mSurfaceVM.RefreshAll());
       isWorking = false;
+    }
+
+    private unsafe void mLine(byte* screenPtrStart, int x1, int y1, int x2, int y2)
+    {
+      var swap = 0;
+      var DX = x2 - x1;
+      var DY = y2 - y1;
+
+      //siccome scambio DY e DX ho sempre DX>=DY allora per sapere quale coordinata occorre cambiare uso una variabile
+      if (Math.Abs(DX) < Math.Abs(DY))
+      {
+        //swap(DX, DY);
+        var tmp = DX;
+        DX = DY;
+        DY = tmp;
+        swap = 1;
+      }
+
+      //per non scrivere sempre i valori assoluti cambio DY e DX con altre variabili
+      var a = Math.Abs(DY);
+      var b = -Math.Abs(DX);
+
+      //il nostro valore d0
+      var d = 2 * a + b;
+
+      //s e q sono gli incrementi/decrementi di x e y
+      var q = 1;
+      var s = 1;
+      if (x1 > x2) q = -1;
+      if (y1 > y2) s = -1;
+      //disegna_punto(x, y);
+      *(screenPtrStart + x1 * screenHeight + y1) = 0;
+      //disegna_punto(x2, y2);
+      *(screenPtrStart + x2 * screenHeight + y2) = 0;
+      
+      //assegna le coordinate iniziali
+      var x = x1;
+      var y = y1;
+
+      for (var k = 0; k < -b; k += 1)
+      {
+        if (d > 0)
+        {
+          x = x + q;
+          y = y + s;
+          d = d + 2 * (a + b);
+        }
+        else
+        {
+          x = x + q;
+          if (swap == 1)
+          {
+            y = y + s;
+            x = x - q;
+          }
+          d = d + 2 * a;
+        }
+        //disegna_punto(x, y);
+        *(screenPtrStart + x * screenHeight + y) = 0;
+      }
+    }
+
+    private unsafe void mDrawTriggerLine(byte* screenPtrStart, byte* screenPtrEnd)
+    {
+      var screenPtr = screenPtrStart + marginTopBottom + (int)(trigger * signalScale);
+      while (screenPtr < screenPtrEnd)
+      {
+        *screenPtr = 0;
+        screenPtr += screenHeight;
+      }
     }
 
     public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }

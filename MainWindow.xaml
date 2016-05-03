@@ -7,6 +7,8 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
   <Grid UseLayoutRounding="True">
-    <Image Source="{Binding SurfaceVM.FractalImage}" Stretch="None" />
+    <Image Source="{Binding SurfaceVM.Image}" Stretch="None" />
+    <Slider HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="10" Orientation="Vertical"
+            Minimum="0" Maximum="100" SmallChange="1" LargeChange="10" Value="{Binding TriggerPercent}" />
   </Grid>
 </Window>

@@ -7,7 +7,7 @@ namespace loork_gui
 {
   class SurfaceVM: INotifyPropertyChanged
   {
-    private WriteableBitmap mFractalImage;
+    private WriteableBitmap mImage;
     private int mWidth, mHeight;
     private Func<int, int, byte> mCalcPixel;
 
@@ -27,13 +27,13 @@ namespace loork_gui
 
     private void RefreshRectangle(int rX, int rY, int rWidth, int rHeight)
     {
-      mFractalImage.Lock();
+      mImage.Lock();
 
       unsafe
       {
-        var bytesPerPixel = (mFractalImage.Format.BitsPerPixel / 8);
-        var ptr = (byte*)mFractalImage.BackBuffer;
-        ptr += rY * mFractalImage.BackBufferStride + rX * bytesPerPixel;
+        var bytesPerPixel = (mImage.Format.BitsPerPixel / 8);
+        var ptr = (byte*)mImage.BackBuffer;
+        ptr += rY * mImage.BackBufferStride + rX * bytesPerPixel;
 
         for (int y = rY; y < rY + rHeight; y++)
         {
@@ -48,20 +48,20 @@ namespace loork_gui
             *ptr = val;
             ptr++;
           }
-          ptr += mFractalImage.BackBufferStride - rWidth * bytesPerPixel;
+          ptr += mImage.BackBufferStride - rWidth * bytesPerPixel;
         }
       }
-      mFractalImage.AddDirtyRect(new System.Windows.Int32Rect(rX, rY, rWidth, rHeight));
-      mFractalImage.Unlock();
+      mImage.AddDirtyRect(new System.Windows.Int32Rect(rX, rY, rWidth, rHeight));
+      mImage.Unlock();
 
       Notify("FractalImage");
     }
 
-    public BitmapSource FractalImage
+    public BitmapSource Image
     {
       get
       {
-        return mFractalImage;
+        return mImage;
       }
     }
 
@@ -90,7 +90,7 @@ namespace loork_gui
       bmp.AddDirtyRect(new System.Windows.Int32Rect(0, 0, mWidth, mHeight));
       bmp.Unlock();
 
-      mFractalImage = bmp;
+      mImage = bmp;
       Notify("FractalImage");
     }
 

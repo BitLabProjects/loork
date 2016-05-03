@@ -27,7 +27,7 @@ namespace loork_gui
       mBuffer = new int[samplesPerSecond];
       mReaderBuffer = new byte[samplesPerSecond*4];
 
-      var signalFrequency = 50000.0f;
+      var signalFrequency = 1000.0f;
       var signalsSamplesPerPeriod = (int)(SamplesPerSecond / signalFrequency);
       mWave = new int[signalsSamplesPerPeriod];
       for (int i = 0; i < mWave.Length; i++)
@@ -52,8 +52,8 @@ namespace loork_gui
         samplesCaptured = mBuffer.Length;
       }
 
-      Capture_AudioFile(samplesCaptured);
-      //Capture_SineWave(samplesCaptured);
+      //Capture_AudioFile(samplesCaptured);
+      Capture_SineWave(samplesCaptured);
 
       return mBuffer;
     }
