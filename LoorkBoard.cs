@@ -145,7 +145,13 @@ namespace loork_gui
         }
       }
 
-      mDispatcher.Invoke(() => mSurfaceVM.RefreshAll());
+      try
+      {
+        mDispatcher.Invoke(() => mSurfaceVM.RefreshAll());
+      } catch (TaskCanceledException)
+      {
+        //Well... uh
+      }
       isWorking = false;
     }
 
