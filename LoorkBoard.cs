@@ -87,19 +87,13 @@ namespace loork_gui
 
       unsafe
       {
+        int channelSamplesCount;
+        var channelSamples = mChannel.Capture(elapsedSeconds, out channelSamplesCount);
+
         fixed (byte* screenPtrStart = mScreenBuffer)
         {
-          var renderer = new Renderer(screenPtrStart, screenHeight);
-          var size = screenWidth * screenHeight;
-          var screenPtrEnd = screenPtrStart + size;
-
-          //Blank screen
-          var screenPtr = screenPtrStart;
-          while (screenPtr++ < screenPtrEnd)
-            *screenPtr = 230;
-
-          int channelSamplesCount;
-          var channelSamples = mChannel.Capture(elapsedSeconds, out channelSamplesCount);
+          var renderer = new Renderer(screenPtrStart, screenWidth, screenHeight);
+          renderer.Clear();
 
           fixed (int* samplesStart = channelSamples)
           {

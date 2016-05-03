@@ -11,15 +11,28 @@ namespace loork_gui
     const byte drawOpacity = (byte)(0.15 * 255); // 30%;
 
     private byte* mScreenPtrStart;
+    private int mScreenWidth;
     private int mScreenHeight;
 
-    public Renderer(byte* screenPtrStart, int screenHeight)
+    public Renderer(byte* screenPtrStart, int screenWidth, int screenHeight)
     {
       mScreenPtrStart = screenPtrStart;
+      mScreenWidth = screenWidth;
       mScreenHeight = screenHeight;
     }
 
-    public unsafe void Line(int x1, int y1, int x2, int y2)
+    public void Clear()
+    {
+      var size = mScreenWidth * mScreenHeight;
+      var screenPtrEnd = mScreenPtrStart + size;
+
+      //Blank screen
+      var screenPtr = mScreenPtrStart;
+      while (screenPtr++ < screenPtrEnd)
+        *screenPtr = 230;
+    }
+
+    public void Line(int x1, int y1, int x2, int y2)
     {
       var swap = false;
       var DX = x2 - x1;
