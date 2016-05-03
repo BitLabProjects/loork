@@ -24,7 +24,6 @@ namespace loork_gui
     const float refreshIntervalInSec = 1.0f / 30.0f;
     const int OneMillion = 1000000;
     const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
-    const byte drawOpacity = (byte)(0.15 * 255); // 30%;
     const int marginTopBottom = 10;
     const int maxSignalValue = 4096;
     private int trigger;
@@ -90,6 +89,7 @@ namespace loork_gui
       {
         fixed (byte* screenPtrStart = mScreenBuffer)
         {
+          var renderer = new Renderer(screenPtrStart, screenHeight);
           var size = screenWidth * screenHeight;
           var screenPtrEnd = screenPtrStart + size;
 
@@ -130,41 +130,9 @@ namespace loork_gui
                 {
                   var currConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
                   x++;
-                  mLine(screenPtrStart, x - 1, (int)prevConditionedSample, x, (int)currConditionedSample);
+                  renderer.Line(x - 1, (int)prevConditionedSample, x, (int)currConditionedSample);
                   prevConditionedSample = currConditionedSample;
                 }
-                /*
-                screenPtr = screenPtrStart + marginTopBottom;
-                var prevConditionedSample = (*samplesPtr++) * signalScale;
-                while (screenPtr < screenPtrEnd - screenHeight)
-                {
-                  var currConditionedSample = (*samplesPtr++) * signalScale;
-                  var delta = currConditionedSample - prevConditionedSample;
-                  var currPtr = screenPtr + (int)prevConditionedSample;
-                  var halfWayPtr = currPtr + (int)(delta / 2);
-                  var ptrDelta = delta > 0 ? 1 : -1;
-                  while (currPtr != halfWayPtr)
-                  {
-                    var currValue = *currPtr;
-                    *currPtr = currValue > drawOpacity ? (byte)(currValue - drawOpacity) : (byte)0;
-                    currPtr += ptrDelta;
-                  }
-                  currPtr += screenHeight;
-                  var endPtr = screenPtr + screenHeight + (int)currConditionedSample;
-                  while (currPtr != endPtr)
-                  {
-                    var currValue = *currPtr;
-                    *currPtr = currValue > drawOpacity ? (byte)(currValue - drawOpacity) : (byte)0;
-                    currPtr += ptrDelta;
-                  }
-                  //Last point (or only point if prevCondSample==currCondSample
-                  var value = *currPtr;
-                  *currPtr = value > drawOpacity ? (byte)(value - drawOpacity) : (byte)0;
-
-                  screenPtr += screenHeight;
-                  prevConditionedSample = currConditionedSample;
-                }
-                */
 
                 while (samplesPtr < samplesEnd)
                 {
@@ -177,80 +145,14 @@ namespace loork_gui
             }
           }
 
-          mDrawTriggerLine(screenPtrStart, screenPtrEnd);
+          //mDrawTriggerLine(screenPtrStart, screenPtrEnd);
+          var conditionedTrigger = (int)(trigger * signalScale + marginTopBottom);
+          renderer.Line(0, conditionedTrigger, screenWidth - 1, conditionedTrigger);
         }
       }
 
       mDispatcher.Invoke(() => mSurfaceVM.RefreshAll());
       isWorking = false;
-    }
-
-    private unsafe void mLine(byte* screenPtrStart, int x1, int y1, int x2, int y2)
-    {
-      var swap = false;
-      var DX = x2 - x1;
-      var DY = y2 - y1;
-
-      //siccome scambio DY e DX ho sempre DX>=DY allora per sapere quale coordinata occorre cambiare uso una variabile
-      if (Math.Abs(DX) < Math.Abs(DY))
-      {
-        //swap(DX, DY);
-        var tmp = DX;
-        DX = DY;
-        DY = tmp;
-        swap = true;
-      }
-
-      //per non scrivere sempre i valori assoluti cambio DY e DX con altre variabili
-      var a = 2 * Math.Abs(DY);
-      var b = -Math.Abs(DX);
-
-      //il nostro valore d0
-      var d = a + b;
-      var dOverflowIncrement = a + 2 * b;
-
-      //s e q sono gli incrementi/decrementi di x e y
-      var xIncrement = screenHeight;
-      var yIncrement = 1;
-      if (x1 > x2) xIncrement = -xIncrement;
-      if (y1 > y2) yIncrement = -yIncrement;
-
-      var pixelPtrIncrement = swap ? yIncrement : xIncrement;
-      
-      //assegna le coordinate iniziali
-      var pixelPtr = screenPtrStart + x1 * screenHeight + y1;
-      *pixelPtr = 0;
-
-      for (var k = 0; k < -b; k += 1)
-      {
-        if (d > 0)
-        {
-          pixelPtr += xIncrement + yIncrement;
-          d += dOverflowIncrement;
-        }
-        else
-        {
-          pixelPtr += pixelPtrIncrement;
-          d += a;
-        }
-
-#if DEBUG
-        if (k == -b - 1)
-          System.Diagnostics.Debug.Assert(pixelPtr == screenPtrStart + x2 * screenHeight + y2);
-#endif
-
-        *pixelPtr = 0;
-      }
-    }
-
-    private unsafe void mDrawTriggerLine(byte* screenPtrStart, byte* screenPtrEnd)
-    {
-      var screenPtr = screenPtrStart + marginTopBottom + (int)(trigger * signalScale);
-      while (screenPtr < screenPtrEnd)
-      {
-        *screenPtr = 0;
-        screenPtr += screenHeight;
-      }
     }
 
     public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
