@@ -5,6 +5,10 @@ VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "loork-gui", "loork-gui.csproj", "{48BE4BEE-ED32-4A16-97C0-C3E715345905}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bitLab.ViewModel", "bitLab.ViewModel\bitLab.ViewModel.csproj", "{830D827E-3603-4564-ADCD-A084F5581FD1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bitLab.Log", "bitLab.Log\bitLab.Log.csproj", "{A25DC3F3-71DF-4145-93E3-A7C5ECA652B1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{48BE4BEE-ED32-4A16-97C0-C3E715345905}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48BE4BEE-ED32-4A16-97C0-C3E715345905}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{48BE4BEE-ED32-4A16-97C0-C3E715345905}.Release|Any CPU.Build.0 = Release|Any CPU
+		{830D827E-3603-4564-ADCD-A084F5581FD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{830D827E-3603-4564-ADCD-A084F5581FD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{830D827E-3603-4564-ADCD-A084F5581FD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{830D827E-3603-4564-ADCD-A084F5581FD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A25DC3F3-71DF-4145-93E3-A7C5ECA652B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A25DC3F3-71DF-4145-93E3-A7C5ECA652B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A25DC3F3-71DF-4145-93E3-A7C5ECA652B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A25DC3F3-71DF-4145-93E3-A7C5ECA652B1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

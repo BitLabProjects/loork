@@ -1,0 +1,6 @@
+[submodule "bitLab.ViewModel"]
+	path = bitLab.ViewModel
+	url = C:\\Dati\\bitLab\\Progetti\\bitLab.ViewModel
+[submodule "bitLab.Log"]
+	path = bitLab.Log
+	url = C:\\Dati\\bitLab\\Progetti\\bitLab.Log

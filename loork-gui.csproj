@@ -68,6 +68,7 @@
     <Compile Include="SignalAnalyzer.cs" />
     <Compile Include="SurfaceVM.cs" />
     <Compile Include="LoorkBoard.cs" />
+    <Compile Include="UserInterface.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -107,6 +108,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="bitLab.ViewModel\bitLab.ViewModel.csproj">
+      <Project>{830d827e-3603-4564-adcd-a084f5581fd1}</Project>
+      <Name>bitLab.ViewModel</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
