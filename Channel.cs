@@ -33,8 +33,8 @@ namespace loork_gui
         mWave[i] = (int)(2048 + 1800 * Math.Sin(2 * Math.PI * t));
       }
 
-      //mAudioReader = new Mp3FileReader("..\\..\\in_the_raw.mp3");
-      mAudioReader = new Mp3FileReader("..\\..\\chirp.mp3");
+      mAudioReader = new Mp3FileReader("..\\..\\in_the_raw.mp3");
+      //mAudioReader = new Mp3FileReader("..\\..\\chirp.mp3");
     }
 
     public int SamplesPerSecond { get { return mSamplesPerSecond; } }
@@ -49,11 +49,11 @@ namespace loork_gui
         samplesCaptured = bufferToFill.Length;
       }
 
-      //Capture_AudioFile(samplesCaptured);
-      Capture_SineWave(bufferToFill, samplesCaptured);
+      Capture_AudioFile(bufferToFill, samplesCaptured);
+      //Capture_SineWave(bufferToFill, samplesCaptured);
     }
 
-    public void Capture_AudioFile(int[] bufferToFill, int samplesCaptured)
+    public void Capture_AudioFile(SamplesBuffer bufferToFill, int samplesCaptured)
     {
       if (mAudioReader.Position > mAudioReader.Length - samplesCaptured * 4)
         mAudioReader.Position = 0;
@@ -61,7 +61,7 @@ namespace loork_gui
       mAudioReader.Read(mReaderBuffer, 0, samplesCaptured*4);
       unsafe
       {
-        fixed (int* bufferStart = bufferToFill)
+        fixed (int* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
         {
           int* buffer = bufferStart;
           int* bufferEnd = bufferStart + samplesCaptured;

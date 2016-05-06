@@ -32,16 +32,19 @@ namespace loork_gui
         *screenPtr = 230;
     }
 
-    public void Plot(int* samplesPtrStart, int* samplesPtrEnd, float signalScale, int marginTopBottom)
+    public void Plot(int* samplesPtrStart, int* samplesPtrEnd, float signalScaleWidth, float signalScaleHeight, int marginTopBottom)
     {
       var samplesPtr = samplesPtrStart;
-      var prevConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
+      var prevConditionedSample = (*samplesPtr++) * signalScaleHeight + marginTopBottom;
       var x = 0;
-      while (samplesPtr < samplesPtrEnd - 1)
+      while (samplesPtr < samplesPtrEnd)
       {
-        var currConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
+        var currConditionedSample = (*samplesPtr++) * signalScaleHeight + marginTopBottom;
         x++;
-        Line(x - 1, (int)prevConditionedSample, x, (int)currConditionedSample);
+        Line((int)((x - 1) * signalScaleWidth), 
+             (int)prevConditionedSample, 
+             (int)(x * signalScaleWidth), 
+             (int)currConditionedSample);
         prevConditionedSample = currConditionedSample;
       }
     }
@@ -84,7 +87,7 @@ namespace loork_gui
       var value = *pixelPtr;
       *pixelPtr = value > drawOpacity ? (byte)(value - drawOpacity) : (byte)0;
 
-      for (var k = 0; k < -b; k += 1)
+      for (var k = 0; k < -b-1; k += 1)
       {
         if (d > 0)
         {

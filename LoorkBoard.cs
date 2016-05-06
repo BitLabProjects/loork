@@ -26,8 +26,10 @@ namespace loork_gui
     const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
     const int marginTopBottom = 10;
     const int maxSignalValue = 4096;
+    private int samplesInScreenWidth;
     private int trigger;
-    private float signalScale;
+    private float signalScaleWidth;
+    private float signalScaleHeight;
 
     public LoorkBoard(Dispatcher dispatcher)
     {
@@ -42,6 +44,7 @@ namespace loork_gui
       //mPort.DataReceived += mPort_DataReceived;
       //mPort.Open();
       TriggerPercent = 50;
+      MicrosecondsPerDivision = 100;
 
 
       mChannel = new Channel(SamplesPerSecond);
@@ -50,7 +53,12 @@ namespace loork_gui
 
       //Use a safe minimum buffer of double the screen width
       //TODO Calculate proper size based on current visualized Sec/Division
-      mSignalAnalyzer = new SignalAnalyzer(screenWidth / 2, screenWidth / 2);
+      var samplesPerMicrosecond = (SamplesPerSecond / 1000000.0f);
+      samplesInScreenWidth = (int)Math.Ceiling(samplesPerMicrosecond * MicrosecondsPerDivision * 10);
+      if (samplesInScreenWidth % 2 > 0)
+        samplesInScreenWidth++;
+
+      mSignalAnalyzer = new SignalAnalyzer(samplesInScreenWidth / 2, samplesInScreenWidth / 2);
 
       mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(refreshIntervalInSec * 1000), (int)(refreshIntervalInSec * 1000));
     }
@@ -63,6 +71,7 @@ namespace loork_gui
     private SignalAnalyzer mSignalAnalyzer;
 
     public double TriggerPercent { get; set; }
+    public int MicrosecondsPerDivision { get; set; }
 
     private void mTimer_Tick(object state)
     {
@@ -87,7 +96,8 @@ namespace loork_gui
       //Console.WriteLine("{0:0.0}", elapsedSeconds * 1000);
 
       intensity = (byte)((intensity + 1) % 255);
-      signalScale = (screenHeight - 2 * marginTopBottom) / (float)maxSignalValue;
+      signalScaleWidth = screenWidth / (float)(samplesInScreenWidth-1);
+      signalScaleHeight = (screenHeight - 2 * marginTopBottom) / (float)maxSignalValue;
       trigger = (int)(TriggerPercent / 100 * maxSignalValue);
       mSignalAnalyzer.TriggerThreshold = trigger;
 
@@ -100,13 +110,34 @@ namespace loork_gui
         {
           var renderer = new Renderer(screenPtrStart, screenWidth, screenHeight);
           renderer.Clear();
-          mSignalAnalyzer.InputSamples( channelSamplesCount, (int* samplesPtr) =>
+          mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr) =>
           {
-            renderer.Plot(samplesPtr - screenWidth / 2, samplesPtr + screenWidth / 2, signalScale, marginTopBottom);
+            renderer.Plot(samplesPtr - samplesInScreenWidth / 2, 
+                          samplesPtr + samplesInScreenWidth / 2, 
+                          signalScaleWidth, 
+                          signalScaleHeight, 
+                          marginTopBottom);
           });
 
-          var conditionedTrigger = (int)(trigger * signalScale + marginTopBottom);
+          var conditionedTrigger = (int)(trigger * signalScaleHeight + marginTopBottom);
           renderer.Line(0, conditionedTrigger, screenWidth - 1, conditionedTrigger);
+
+          //Grid
+          var divisionSize = (int)(screenWidth / 10);
+          for (int x = 1; x < 10; x++)
+          {
+            var repetitions = x == 5 ? 3 : 1;
+            for(var rep = 0; rep < repetitions; rep++)
+              renderer.Line(x * divisionSize, 0, x*divisionSize, screenHeight);
+          }
+
+          var divisionsFittingHeightCount = screenHeight / divisionSize;
+          for (int y = 1; y < divisionsFittingHeightCount; y++)
+          {
+            var repetitions = y == divisionsFittingHeightCount/2 ? 3 : 1;
+            for (var rep = 0; rep < repetitions; rep++)
+              renderer.Line(0, y * divisionSize, screenWidth,  y * divisionSize);
+          }
         }
       }
 
