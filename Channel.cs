@@ -9,7 +9,6 @@ namespace loork_gui
 {
   class Channel
   {
-    private int[] mBuffer;
     private int[] mWave;
 
     private int mSamplesPerSecond;
@@ -23,8 +22,6 @@ namespace loork_gui
     {
       mSamplesPerSecond = samplesPerSecond;
 
-      //Allocate a buffer of one second
-      mBuffer = new int[samplesPerSecond];
       mReaderBuffer = new byte[samplesPerSecond*4];
 
       var signalFrequency = 1000.0f;
@@ -42,23 +39,21 @@ namespace loork_gui
 
     public int SamplesPerSecond { get { return mSamplesPerSecond; } }
 
-    public int[] Capture(float secondsPassed, out int samplesCaptured)
+    public void Capture(float secondsPassed, int[] bufferToFill, out int samplesCaptured)
     {
       samplesCaptured = (int)(secondsPassed * mSamplesPerSecond);
-      if (samplesCaptured > mBuffer.Length)
+      if (samplesCaptured > bufferToFill.Length)
       {
         //throw new ArgumentException("Too much time passed, not enough buffer");
         Console.WriteLine("Overflow");
-        samplesCaptured = mBuffer.Length;
+        samplesCaptured = bufferToFill.Length;
       }
 
       //Capture_AudioFile(samplesCaptured);
-      Capture_SineWave(samplesCaptured);
-
-      return mBuffer;
+      Capture_SineWave(bufferToFill, samplesCaptured);
     }
 
-    public void Capture_AudioFile(int samplesCaptured)
+    public void Capture_AudioFile(int[] bufferToFill, int samplesCaptured)
     {
       if (mAudioReader.Position > mAudioReader.Length - samplesCaptured * 4)
         mAudioReader.Position = 0;
@@ -66,7 +61,7 @@ namespace loork_gui
       mAudioReader.Read(mReaderBuffer, 0, samplesCaptured*4);
       unsafe
       {
-        fixed (int* bufferStart = mBuffer)
+        fixed (int* bufferStart = bufferToFill)
         {
           int* buffer = bufferStart;
           int* bufferEnd = bufferStart + samplesCaptured;
@@ -91,11 +86,11 @@ namespace loork_gui
       }
     }
 
-    public void Capture_SineWave(int samplesCaptured)
+    public void Capture_SineWave(int[] bufferToFill, int samplesCaptured)
     {
       unsafe
       {
-        fixed (int* bufferStart = mBuffer)
+        fixed (int* bufferStart = bufferToFill)
         {
           int* buffer = bufferStart;
           int* bufferEnd = bufferStart + samplesCaptured;

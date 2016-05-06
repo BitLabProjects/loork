@@ -48,6 +48,10 @@ namespace loork_gui
       isCounterStarted = false;
       counter = new QueryPerfCounter();
 
+      //Use a safe minimum buffer of double the screen width
+      //TODO Calculate proper size based on current visualized Sec/Division
+      mSignalAnalyzer = new SignalAnalyzer(screenWidth / 2, screenWidth / 2);
+
       mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(refreshIntervalInSec * 1000), (int)(refreshIntervalInSec * 1000));
     }
 
@@ -56,6 +60,7 @@ namespace loork_gui
     private Channel mChannel;
     private QueryPerfCounter counter;
     private bool isWorking = false;
+    private SignalAnalyzer mSignalAnalyzer;
 
     public double TriggerPercent { get; set; }
 
@@ -84,62 +89,22 @@ namespace loork_gui
       intensity = (byte)((intensity + 1) % 255);
       signalScale = (screenHeight - 2 * marginTopBottom) / (float)maxSignalValue;
       trigger = (int)(TriggerPercent / 100 * maxSignalValue);
+      mSignalAnalyzer.TriggerThreshold = trigger;
 
       unsafe
       {
         int channelSamplesCount;
-        var channelSamples = mChannel.Capture(elapsedSeconds, out channelSamplesCount);
+        mChannel.Capture(elapsedSeconds, mSignalAnalyzer.GetBufferToFill(), out channelSamplesCount);
 
         fixed (byte* screenPtrStart = mScreenBuffer)
         {
           var renderer = new Renderer(screenPtrStart, screenWidth, screenHeight);
           renderer.Clear();
-
-          fixed (int* samplesStart = channelSamples)
+          mSignalAnalyzer.InputSamples( channelSamplesCount, (int* samplesPtr) =>
           {
-            var samplesEnd = samplesStart + screenWidth / 2 + (channelSamplesCount - screenWidth / 2);
-            var samplesPtr = samplesStart + screenWidth / 2;
+            renderer.Plot(samplesPtr - screenWidth / 2, samplesPtr + screenWidth / 2, signalScale, marginTopBottom);
+          });
 
-            //Wait for un-trigger
-            if (*samplesPtr >= trigger)
-            {
-              while (samplesPtr < samplesEnd)
-              {
-                if (*samplesPtr++ < trigger)
-                  break;
-              }
-            }
-
-            var prevSample = *samplesPtr;
-            while (samplesPtr < samplesEnd)
-            {
-              var sample = *samplesPtr++;
-              if (sample >= trigger)// && Math.Abs(sample - prevSample - 100) < 5)
-              {
-                samplesPtr -= screenWidth / 2;
-                var samplesPtrEnd = samplesPtr + screenWidth;
-                var prevConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
-                var x = 0;
-                while (samplesPtr < samplesPtrEnd - 1)
-                {
-                  var currConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
-                  x++;
-                  renderer.Line(x - 1, (int)prevConditionedSample, x, (int)currConditionedSample);
-                  prevConditionedSample = currConditionedSample;
-                }
-
-                while (samplesPtr < samplesEnd)
-                {
-                  if (*samplesPtr++ < trigger)
-                    break;
-                }
-                sample = *(samplesPtr - 1);
-              }
-              prevSample = sample;
-            }
-          }
-
-          //mDrawTriggerLine(screenPtrStart, screenPtrEnd);
           var conditionedTrigger = (int)(trigger * signalScale + marginTopBottom);
           renderer.Line(0, conditionedTrigger, screenWidth - 1, conditionedTrigger);
         }
@@ -148,7 +113,8 @@ namespace loork_gui
       try
       {
         mDispatcher.Invoke(() => mSurfaceVM.RefreshAll());
-      } catch (TaskCanceledException)
+      }
+      catch (TaskCanceledException)
       {
         //Well... uh
       }

@@ -62,9 +62,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Channel.cs" />
-    <Compile Include="Oscilloscope.cs" />
     <Compile Include="QueryPerfCounter.cs" />
     <Compile Include="Renderer.cs" />
+    <Compile Include="SignalAnalyzer.cs" />
     <Compile Include="SurfaceVM.cs" />
     <Compile Include="LoorkBoard.cs" />
     <Page Include="MainWindow.xaml">

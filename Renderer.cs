@@ -32,6 +32,20 @@ namespace loork_gui
         *screenPtr = 230;
     }
 
+    public void Plot(int* samplesPtrStart, int* samplesPtrEnd, float signalScale, int marginTopBottom)
+    {
+      var samplesPtr = samplesPtrStart;
+      var prevConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
+      var x = 0;
+      while (samplesPtr < samplesPtrEnd - 1)
+      {
+        var currConditionedSample = (*samplesPtr++) * signalScale + marginTopBottom;
+        x++;
+        Line(x - 1, (int)prevConditionedSample, x, (int)currConditionedSample);
+        prevConditionedSample = currConditionedSample;
+      }
+    }
+
     public void Line(int x1, int y1, int x2, int y2)
     {
       var swap = false;
