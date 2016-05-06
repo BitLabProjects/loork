@@ -11,38 +11,39 @@ namespace loork_gui
 {
   class LoorkBoard
   {
-    private SerialPort mPort;
     private const int screenWidth = 400;
     private const int screenHeight = 240;
+
+    private const float RefreshIntervalInSec = 1.0f / 30.0f;
+    private const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
+    private const int MarginTopBottom = 10;
+    private const int MaxSignalValue = 4096;
+
     private bool mSyncReceived;
     private byte[] mScreenBuffer;
     private int mScreenBufferIdx;
     private SurfaceVM mSurfaceVM;
     private Dispatcher mDispatcher;
     private System.Threading.Timer mTimer;
-
-    const float refreshIntervalInSec = 1.0f / 30.0f;
-    const int OneMillion = 1000000;
-    const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
-    const int marginTopBottom = 10;
-    const int maxSignalValue = 4096;
     private int samplesInScreenWidth;
     private int trigger;
     private float signalScaleWidth;
     private float signalScaleHeight;
+    private byte intensity = 0;
+    private bool isCounterStarted;
+    private Channel mChannel;
+    private QueryPerfCounter counter;
+    private bool isWorking = false;
+    private SignalAnalyzer mSignalAnalyzer;
 
     public LoorkBoard(Dispatcher dispatcher)
     {
       mDispatcher = dispatcher;
       mScreenBuffer = new byte[screenWidth * screenHeight];
       mScreenBufferIdx = 0;
-      //mSurfaceVM = new SurfaceVM(screenWidth, screenHeight, (x, y) => (byte)(mScreenBuffer[x * screenHeight + y] == 0 ? 255 : 0));
       mSurfaceVM = new SurfaceVM(screenWidth, screenHeight, (x, y) => (byte)(mScreenBuffer[x * screenHeight + y]));
       mSyncReceived = false;
 
-      //mPort = new SerialPort("COM3", 115200, Parity.None, 8, StopBits.One);
-      //mPort.DataReceived += mPort_DataReceived;
-      //mPort.Open();
       TriggerPercent = 50;
       MicrosecondsPerDivision = 100;
 
@@ -51,8 +52,6 @@ namespace loork_gui
       isCounterStarted = false;
       counter = new QueryPerfCounter();
 
-      //Use a safe minimum buffer of double the screen width
-      //TODO Calculate proper size based on current visualized Sec/Division
       var samplesPerMicrosecond = (SamplesPerSecond / 1000000.0f);
       samplesInScreenWidth = (int)Math.Ceiling(samplesPerMicrosecond * MicrosecondsPerDivision * 10);
       if (samplesInScreenWidth % 2 > 0)
@@ -60,18 +59,12 @@ namespace loork_gui
 
       mSignalAnalyzer = new SignalAnalyzer(samplesInScreenWidth / 2, samplesInScreenWidth / 2);
 
-      mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(refreshIntervalInSec * 1000), (int)(refreshIntervalInSec * 1000));
+      mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(RefreshIntervalInSec * 1000), (int)(RefreshIntervalInSec * 1000));
     }
-
-    private byte intensity = 0;
-    private bool isCounterStarted;
-    private Channel mChannel;
-    private QueryPerfCounter counter;
-    private bool isWorking = false;
-    private SignalAnalyzer mSignalAnalyzer;
 
     public double TriggerPercent { get; set; }
     public int MicrosecondsPerDivision { get; set; }
+    public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
 
     private void mTimer_Tick(object state)
     {
@@ -97,8 +90,8 @@ namespace loork_gui
 
       intensity = (byte)((intensity + 1) % 255);
       signalScaleWidth = screenWidth / (float)(samplesInScreenWidth-1);
-      signalScaleHeight = (screenHeight - 2 * marginTopBottom) / (float)maxSignalValue;
-      trigger = (int)(TriggerPercent / 100 * maxSignalValue);
+      signalScaleHeight = (screenHeight - 2 * MarginTopBottom) / (float)MaxSignalValue;
+      trigger = (int)(TriggerPercent / 100 * MaxSignalValue);
       mSignalAnalyzer.TriggerThreshold = trigger;
 
       unsafe
@@ -116,10 +109,10 @@ namespace loork_gui
                           samplesPtr + samplesInScreenWidth / 2, 
                           signalScaleWidth, 
                           signalScaleHeight, 
-                          marginTopBottom);
+                          MarginTopBottom);
           });
 
-          var conditionedTrigger = (int)(trigger * signalScaleHeight + marginTopBottom);
+          var conditionedTrigger = (int)(trigger * signalScaleHeight + MarginTopBottom);
           renderer.Line(0, conditionedTrigger, screenWidth - 1, conditionedTrigger);
 
           //Grid
@@ -150,42 +143,6 @@ namespace loork_gui
         //Well... uh
       }
       isWorking = false;
-    }
-
-    public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
-
-    private void mPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
-    {
-      var bytesToRead = Math.Min(mPort.BytesToRead, mScreenBuffer.Length - mScreenBufferIdx);
-      mScreenBufferIdx += mPort.Read(mScreenBuffer, mScreenBufferIdx, bytesToRead);
-
-      if (!mSyncReceived)
-      {
-        for (int i = 0; i < mScreenBufferIdx; i++)
-          if (mScreenBuffer[i] == 85)
-          {
-            var j = 0;
-            i++;
-            while (i < mScreenBufferIdx)
-              mScreenBuffer[j++] = mScreenBuffer[i++];
-
-            mScreenBufferIdx = j;
-
-            mSyncReceived = true;
-            break;
-          }
-        if (!mSyncReceived)
-        {
-          mScreenBufferIdx = 0;
-        }
-      }
-
-      if (mScreenBufferIdx == mScreenBuffer.Length)
-      {
-        mDispatcher.Invoke(() => mSurfaceVM.RefreshAll());
-        mScreenBufferIdx = 0;
-        mSyncReceived = false;
-      }
     }
   }
 }

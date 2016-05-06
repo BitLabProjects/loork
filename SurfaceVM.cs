@@ -39,7 +39,7 @@ namespace loork_gui
         {
           for (int x = rX; x < rX + rWidth; x++)
           {
-            byte val = mCalcPixel(x, y);
+            byte val = mCalcPixel(x, rHeight - y - 1);
 
             *ptr = val;
             ptr++;

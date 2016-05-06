@@ -73,13 +73,10 @@ namespace loork_gui
 
             while (buffer < bufferEnd)
             {
-              var sample = *wave++;// (*wave++) | (*wave++) << 8;
+              var sample = *wave++;
               sample = (Int16)(sample / 64);
-              //System.IO.File.AppendAllText("C:\\temp\\out.txt", wave + ",");
               wave += 1;
               *buffer++ = 2048 + (sample);
-              //*buffer++ = 2048 + (sample);
-              //*buffer++ = 2048 + (sample);
             }
           }
         }
