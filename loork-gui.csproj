@@ -64,6 +64,7 @@
     <Compile Include="Channel.cs" />
     <Compile Include="QueryPerfCounter.cs" />
     <Compile Include="Renderer.cs" />
+    <Compile Include="SamplesBuffer.cs" />
     <Compile Include="SignalAnalyzer.cs" />
     <Compile Include="SurfaceVM.cs" />
     <Compile Include="LoorkBoard.cs" />

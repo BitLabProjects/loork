@@ -39,7 +39,7 @@ namespace loork_gui
 
     public int SamplesPerSecond { get { return mSamplesPerSecond; } }
 
-    public void Capture(float secondsPassed, int[] bufferToFill, out int samplesCaptured)
+    public void Capture(float secondsPassed, SamplesBuffer bufferToFill, out int samplesCaptured)
     {
       samplesCaptured = (int)(secondsPassed * mSamplesPerSecond);
       if (samplesCaptured > bufferToFill.Length)
@@ -86,11 +86,12 @@ namespace loork_gui
       }
     }
 
-    public void Capture_SineWave(int[] bufferToFill, int samplesCaptured)
+    private long mWaveInitialOffset;
+    public void Capture_SineWave(SamplesBuffer bufferToFill, int samplesCaptured)
     {
       unsafe
       {
-        fixed (int* bufferStart = bufferToFill)
+        fixed (int* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
         {
           int* buffer = bufferStart;
           int* bufferEnd = bufferStart + samplesCaptured;
@@ -99,13 +100,21 @@ namespace loork_gui
           {
             int* waveEnd = waveStart + mWave.Length;
 
+            var isFirst = true;
             while (buffer < bufferEnd)
             {
               int* wave = waveStart;
+              if (isFirst)
+              {
+                wave += mWaveInitialOffset;
+                isFirst = false;
+              }
+
               while ((wave < waveEnd) && (buffer < bufferEnd))
               {
                 *buffer++ = (int)(*wave++ + (-50 + r.Next() % 100));
               }
+              mWaveInitialOffset = wave - waveStart;
             }
           }
         }

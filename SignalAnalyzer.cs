@@ -8,9 +8,9 @@ namespace loork_gui
 {
   unsafe class SignalAnalyzer
   {
-    private int[] mSamplesBuffer1;
-    private int[] mSamplesBuffer2;
-    private int[] mLastSamplesBuffer;
+    private SamplesBuffer mSamplesBuffer1;
+    private SamplesBuffer mSamplesBuffer2;
+    private SamplesBuffer mLastSamplesBuffer;
     private int mLastSamplesBufferCount;
     private int mLastSamplesBufferRemainingCount;
     private int mTriggerSamplesBeforeCount;
@@ -19,8 +19,8 @@ namespace loork_gui
     public SignalAnalyzer(int triggerSamplesBeforeCount, int triggerSamplesAfterCount)
     {
       const int BufferSize = 4000;
-      mSamplesBuffer1 = new int[BufferSize];
-      mSamplesBuffer2 = new int[BufferSize];
+      mSamplesBuffer1 = new SamplesBuffer(BufferSize, triggerSamplesBeforeCount);
+      mSamplesBuffer2 = new SamplesBuffer(BufferSize, triggerSamplesBeforeCount);
       mLastSamplesBuffer = mSamplesBuffer2;//Start with buffer 2 so the buffer 1 is the first one filled
       mLastSamplesBufferCount = 0;
       mLastSamplesBufferRemainingCount = 0;
@@ -31,7 +31,7 @@ namespace loork_gui
 
     public int TriggerThreshold;
 
-    public int[] GetBufferToFill()
+    public SamplesBuffer GetBufferToFill()
     {
       if (mLastSamplesBuffer == mSamplesBuffer1)
         return mSamplesBuffer2;
@@ -48,12 +48,11 @@ namespace loork_gui
     {
       var filledBuffer = GetBufferToFill();
       //Start searching for next trigger
-      fixed (int* samplesPtrStart = filledBuffer)
+      fixed (int* samplesPtrStart = &filledBuffer.Buffer[filledBuffer.StartIdx])
       {
         var lastPtrToSearchTrigger = samplesPtrStart + (samplesCount - mTriggerSamplesAfterCount - 1);
 
-        //TODO Recover unused samples of previous scan using mLastSamplesBufferRemainingCount
-        var samplesPtr = samplesPtrStart + mTriggerSamplesBeforeCount;
+        var samplesPtr = samplesPtrStart;// + mTriggerSamplesBeforeCount;
         //Avoid triggering if already above
         while (samplesPtr != lastPtrToSearchTrigger)
         {
@@ -68,7 +67,35 @@ namespace loork_gui
         {
           if (*samplesPtr > TriggerThreshold)
           {
-            onTriggerCallback(samplesPtr);
+            var skipTrigger = false;
+            //You always have mTriggerSamplesAfterCount leftover samples from the previous run (Except for the first one)
+            //If a trigger is found before mTriggerSamplesAfterCount samples in this run, copy preamble samples before 
+            //the trigger for the display to draw
+            var missingSamples = mTriggerSamplesBeforeCount - (samplesPtr - samplesPtrStart);
+            if (missingSamples > 0)
+            {
+              //Skip trigger if no samples to integrate
+              if (mLastSamplesBufferCount < missingSamples)
+              {
+                skipTrigger = true;
+              }
+              else
+              {
+                fixed (int* lastSampledStartPtr = &mLastSamplesBuffer.Buffer[mLastSamplesBuffer.StartIdx + mLastSamplesBufferCount - missingSamples])
+                {
+                  var lastSampledPtr = lastSampledStartPtr;
+                  var preamblePtr = samplesPtrStart - missingSamples;
+                  while(preamblePtr < samplesPtrStart)
+                  {
+                    *preamblePtr++ = *lastSampledPtr++;
+                  }
+                }
+              }
+            }
+
+            if (!skipTrigger)
+              onTriggerCallback(samplesPtr);
+
             //Discard samples still above the trigger, do avoid triggering by mistake.
             //TODO mLastTriggerSampleIdx = (mLastTriggerSampleIdx + mTriggerSamplesAfterCount) % mSamples.Length;
             while (samplesPtr != lastPtrToSearchTrigger)
@@ -88,7 +115,6 @@ namespace loork_gui
       }
       mLastSamplesBuffer = filledBuffer;
       mLastSamplesBufferCount = samplesCount;
-      mLastSamplesBufferRemainingCount = 0;
     }
   }
 }
