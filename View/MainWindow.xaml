@@ -14,7 +14,7 @@
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
     <Image Source="{Binding SurfaceVM.Image}" Stretch="None" Width="400" Height="240" />
-    <StackPanel Grid.Column="1" Orientation="Vertical" DataContext="{Binding UserInterfaceVM}">
+    <StackPanel Grid.Column="1" Orientation="Vertical">
       <Button Width="60" Height="38" Margin="5" Content="Trigger" Command="{Binding SetTriggerLevelFunctionality}" />
       <Button Width="60" Height="38" Margin="5" Content="Timebase" Command="{Binding SetMicrosecondsPerDivisionFunctionality}" />
       <Button Width="60" Height="38" Margin="5" />
@@ -23,6 +23,6 @@
     </StackPanel>
     <controls:Knob Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="10"
                    Width="60" Height="60"
-                   KnobRotatedCommand="{Binding UserInterfaceVM.UpdateValueFromKnob}"/>
+                   KnobRotatedCommand="{Binding UpdateValueFromKnob}"/>
   </Grid>
 </Window>

@@ -30,6 +30,8 @@ namespace loork_gui.Oscilloscope
       mTriggerSample = (int)(triggerPercent / 100 * Constants.MaxSignalValue);
     }
 
+    public int TriggerSample { get { return mTriggerSample; } }
+
     public SamplesBuffer GetBufferToFill()
     {
       if (mLastSamplesBuffer == mSamplesBuffer1)

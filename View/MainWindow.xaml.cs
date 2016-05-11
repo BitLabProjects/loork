@@ -26,8 +26,6 @@ namespace loork_gui.View
     public MainWindow()
     {
       InitializeComponent();
-
-      DataContext = new LoorkBoard(Dispatcher);
     }
   }
 }

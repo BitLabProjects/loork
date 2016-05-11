@@ -14,30 +14,28 @@ namespace loork_gui.Oscilloscope
   {
     private byte[] mScreenBuffer;
     private SurfaceVM mSurfaceVM;
-    private UserInterfaceVM mUserInterfaceVM;
     private Dispatcher mDispatcher;
     private System.Threading.Timer mTimer;
-    private int samplesInScreenWidth;
-    private int trigger;
-    private float signalScaleWidth;
-    private float signalScaleHeight;
-    private byte intensity = 0;
     private bool isCounterStarted;
     private Channel mChannel;
     private QueryPerfCounter counter;
     private bool isWorking = false;
     private SignalAnalyzer mSignalAnalyzer;
-    private bool mSettingsChanged;
 
+    //User settings
     private double mTriggerPercent;
     private int mMicrosecondsPerDivision;
+    private bool mSettingsChanged;
+    //Calculated values from user settings
+    private int mSamplesInScreenWidth;
+    private float mSignalScaleWidth;
+    private float mSignalScaleHeight;
 
     public LoorkBoard(Dispatcher dispatcher)
     {
       mDispatcher = dispatcher;
       mScreenBuffer = new byte[Constants.ScreenWidth * Constants.ScreenHeight];
       mSurfaceVM = new SurfaceVM(Constants.ScreenWidth, Constants.ScreenHeight, (x, y) => (byte)(mScreenBuffer[x * Constants.ScreenHeight + y]));
-      mUserInterfaceVM = new UserInterfaceVM(this);
 
       mTriggerPercent = 50;
       mMicrosecondsPerDivision = 100;
@@ -50,6 +48,7 @@ namespace loork_gui.Oscilloscope
       mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(Constants.RefreshIntervalInSec * 1000), (int)(Constants.RefreshIntervalInSec * 1000));
     }
 
+    #region Properties
     public double TriggerPercent
     {
       get
@@ -74,8 +73,9 @@ namespace loork_gui.Oscilloscope
         mSettingsChanged = true;
       }
     }
+    #endregion
+
     public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
-    public UserInterfaceVM UserInterfaceVM { get { return mUserInterfaceVM; } }
 
     public void NextMicrosecondsPerDivision()
     {
@@ -98,11 +98,14 @@ namespace loork_gui.Oscilloscope
     private void Create()
     {
       var samplesPerMicrosecond = (Constants.SamplesPerSecond / 1000000.0f);
-      samplesInScreenWidth = (int)Math.Ceiling(samplesPerMicrosecond * MicrosecondsPerDivision * 10);
-      if (samplesInScreenWidth % 2 > 0)
-        samplesInScreenWidth++;
+      mSamplesInScreenWidth = (int)Math.Ceiling(samplesPerMicrosecond * MicrosecondsPerDivision * 10);
+      if (mSamplesInScreenWidth % 2 > 0)
+        mSamplesInScreenWidth++;
 
-      mSignalAnalyzer = new SignalAnalyzer(samplesInScreenWidth / 2, samplesInScreenWidth / 2, TriggerPercent);
+      mSignalScaleWidth = Constants.ScreenWidth / (float)(mSamplesInScreenWidth - 1);
+      mSignalScaleHeight = (Constants.ScreenHeight - 2 * Constants.MarginTopBottom) / (float)Constants.MaxSignalValue;
+
+      mSignalAnalyzer = new SignalAnalyzer(mSamplesInScreenWidth / 2, mSamplesInScreenWidth / 2, TriggerPercent);
     }
 
     private void mTimer_Tick(object state)
@@ -131,13 +134,6 @@ namespace loork_gui.Oscilloscope
         mSettingsChanged = false;
       }
 
-      //Console.WriteLine("{0:0.0}", elapsedSeconds * 1000);
-
-      intensity = (byte)((intensity + 1) % 255);
-      signalScaleWidth = Constants.ScreenWidth / (float)(samplesInScreenWidth-1);
-      signalScaleHeight = (Constants.ScreenHeight - 2 * Constants.MarginTopBottom) / (float)Constants.MaxSignalValue;
-      trigger = (int)(TriggerPercent / 100 * Constants.MaxSignalValue);
-
       unsafe
       {
         int channelSamplesCount;
@@ -149,14 +145,14 @@ namespace loork_gui.Oscilloscope
           renderer.Clear();
           mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr) =>
           {
-            renderer.Plot(samplesPtr - samplesInScreenWidth / 2, 
-                          samplesPtr + samplesInScreenWidth / 2, 
-                          signalScaleWidth, 
-                          signalScaleHeight,
+            renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2, 
+                          samplesPtr + mSamplesInScreenWidth / 2, 
+                          mSignalScaleWidth, 
+                          mSignalScaleHeight,
                           Constants.MarginTopBottom);
           });
 
-          var conditionedTrigger = (int)(trigger * signalScaleHeight + Constants.MarginTopBottom);
+          var conditionedTrigger = (int)(mSignalAnalyzer.TriggerSample * mSignalScaleHeight + Constants.MarginTopBottom);
           renderer.Line(0, conditionedTrigger, Constants.ScreenWidth - 1, conditionedTrigger);
 
           //Grid

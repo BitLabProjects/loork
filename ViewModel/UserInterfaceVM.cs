@@ -35,6 +35,7 @@ namespace loork_gui
       get { return mCurrentFunctionality; }
       set { SetAndNotify(ref mCurrentFunctionality, value); }
     }
+    public SurfaceVM SurfaceVM { get { return mBoard.SurfaceVM; } }
     #endregion
 
     #region Commands

@@ -1,4 +1,5 @@
-﻿using loork_gui.View;
+﻿using loork_gui.Oscilloscope;
+using loork_gui.View;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -16,7 +17,11 @@ namespace loork_gui
   {
     private void Application_Startup(object sender, StartupEventArgs e)
     {
+      var board = new LoorkBoard(Dispatcher);
+      var userInterfaceVM = new UserInterfaceVM(board);
+
       var window = new MainWindow();
+      window.DataContext = userInterfaceVM;
       window.Show();
     }
   }
