@@ -19,6 +19,14 @@ namespace loork_gui
     private const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
     private const int MarginTopBottom = 10;
     private const int MaxSignalValue = 4096;
+    private int[] TimebaseSteps = new int[] {
+      1, 2, 5,
+      10, 20, 50,
+      100, 200, 500,
+      1 *1000, 2*1000, 5*1000,
+      //10*1000, 20*1000, 50*1000,
+      //100*1000, 200*1000, 500*1000};
+    };
 
     private byte[] mScreenBuffer;
     private SurfaceVM mSurfaceVM;
@@ -35,6 +43,8 @@ namespace loork_gui
     private QueryPerfCounter counter;
     private bool isWorking = false;
     private SignalAnalyzer mSignalAnalyzer;
+    private bool mSettingsChanged;
+    private int mMicrosecondsPerDivision;
 
     public LoorkBoard(Dispatcher dispatcher)
     {
@@ -44,27 +54,60 @@ namespace loork_gui
       mUserInterfaceVM = new UserInterfaceVM(this);
 
       TriggerPercent = 50;
-      MicrosecondsPerDivision = 100;
+      mMicrosecondsPerDivision = 100;
 
 
       mChannel = new Channel(SamplesPerSecond);
       isCounterStarted = false;
       counter = new QueryPerfCounter();
 
+      mSettingsChanged = true;
+
+      mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(RefreshIntervalInSec * 1000), (int)(RefreshIntervalInSec * 1000));
+    }
+
+    public double TriggerPercent { get; set; }
+    public int MicrosecondsPerDivision {
+      get
+      {
+        return mMicrosecondsPerDivision;
+      }
+      set
+      {
+        mMicrosecondsPerDivision = value;
+        mSettingsChanged = true;
+      }
+    }
+    public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
+    public UserInterfaceVM UserInterfaceVM { get { return mUserInterfaceVM; } }
+
+    public void NextMicrosecondsPerDivision()
+    {
+      for (var idxStep = 0; idxStep < TimebaseSteps.Length; idxStep++)
+        if (MicrosecondsPerDivision < TimebaseSteps[idxStep])
+        {
+          MicrosecondsPerDivision = TimebaseSteps[idxStep];
+          return;
+        }
+    }
+    public void PrevMicrosecondsPerDivision()
+    {
+      for (var idxStep = TimebaseSteps.Length-1; idxStep > 0; idxStep--)
+        if (MicrosecondsPerDivision > TimebaseSteps[idxStep])
+        {
+          MicrosecondsPerDivision = TimebaseSteps[idxStep];
+          return;
+        }
+    }
+    private void Create()
+    {
       var samplesPerMicrosecond = (SamplesPerSecond / 1000000.0f);
       samplesInScreenWidth = (int)Math.Ceiling(samplesPerMicrosecond * MicrosecondsPerDivision * 10);
       if (samplesInScreenWidth % 2 > 0)
         samplesInScreenWidth++;
 
       mSignalAnalyzer = new SignalAnalyzer(samplesInScreenWidth / 2, samplesInScreenWidth / 2);
-
-      mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(RefreshIntervalInSec * 1000), (int)(RefreshIntervalInSec * 1000));
     }
-
-    public double TriggerPercent { get; set; }
-    public int MicrosecondsPerDivision { get; set; }
-    public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
-    public UserInterfaceVM UserInterfaceVM { get { return mUserInterfaceVM; } }
 
     private void mTimer_Tick(object state)
     {
@@ -85,6 +128,12 @@ namespace loork_gui
       counter.Stop();
       var elapsedSeconds = (float)(counter.Duration(1) / 1000000000.0f);
       counter.Start();
+
+      if (mSettingsChanged)
+      {
+        Create();
+        mSettingsChanged = false;
+      }
 
       //Console.WriteLine("{0:0.0}", elapsedSeconds * 1000);
 

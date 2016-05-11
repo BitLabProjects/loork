@@ -24,6 +24,7 @@ namespace loork_gui
       SetTriggerLevelFunctionality = new CDelegateCommand(mSetTriggerLevelFunctionality);
       SetMicrosecondsPerDivisionFunctionality = new CDelegateCommand(mSetMicrosecondsPerDivisionFunctionality);
       UpdateValueFromKnob = new CDelegateCommand(mUpdateValueFromKnob);
+      mPrevUpdateValueFromKnobDate = DateTime.Now;
     }
 
     #region Properties
@@ -49,18 +50,41 @@ namespace loork_gui
     }
 
     public CDelegateCommand UpdateValueFromKnob { get; private set; }
+
+    private DateTime mPrevUpdateValueFromKnobDate;
+    private double mMicrosecondsPerDivisionAccumulator;
     private void mUpdateValueFromKnob(object arg)
     {
+      //Reset accumulator if enough time has passed since last delta, to guess the begin of a new interaction
+      var now = DateTime.Now;
+      if (now.Subtract(mPrevUpdateValueFromKnobDate).TotalMilliseconds > 1000)
+        mMicrosecondsPerDivisionAccumulator = 0;
+      mPrevUpdateValueFromKnobDate = now;
+
       var delta = (double)arg;
       switch (CurrentFunctionality)
       {
         case Functionality.TriggerLevel:
-          var newTriggerPercent = mBoard.TriggerPercent + delta / 4;
-          newTriggerPercent = newTriggerPercent > 100 ? 100 : newTriggerPercent;
-          newTriggerPercent = newTriggerPercent < 0 ? 0 : newTriggerPercent;
-          mBoard.TriggerPercent = newTriggerPercent;
+          mBoard.TriggerPercent = mClamp(0, mBoard.TriggerPercent + delta / 4, 100);
+          break;
+        case Functionality.MicrosecondsPerDivision:
+          mMicrosecondsPerDivisionAccumulator += delta;
+          //mBoard.MicrosecondsPerDivision = (int)mClamp(10, mBoard.MicrosecondsPerDivision + delta, 500*1000);
+          if (Math.Abs(mMicrosecondsPerDivisionAccumulator) > 30)
+          {
+            if (mMicrosecondsPerDivisionAccumulator > 0)
+              mBoard.NextMicrosecondsPerDivision();
+            else
+              mBoard.PrevMicrosecondsPerDivision();
+            mMicrosecondsPerDivisionAccumulator = 0;
+          }
           break;
       }
+    }
+
+    private double mClamp(double min, double value, double max)
+    {
+      return value < min ? min : (value > max ? max : value);
     }
     #endregion
   }
