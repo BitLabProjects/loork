@@ -1,6 +1,6 @@
 [submodule "bitLab.ViewModel"]
 	path = bitLab.ViewModel
-	url = C:\\Dati\\bitLab\\Progetti\\bitLab.ViewModel
+	url = https://github.com/BitLabProjects/bitLab.ViewModel.git
 [submodule "bitLab.Log"]
 	path = bitLab.Log
-	url = C:\\Dati\\bitLab\\Progetti\\bitLab.Log
+	url = https://github.com/BitLabProjects/bitLab.Log.git
