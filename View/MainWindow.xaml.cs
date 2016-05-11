@@ -1,4 +1,5 @@
-﻿using System;
+﻿using loork_gui.Oscilloscope;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,7 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace loork_gui
+namespace loork_gui.View
 {
   /// <summary>
   /// Interaction logic for MainWindow.xaml

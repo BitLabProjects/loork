@@ -1,4 +1,5 @@
 ﻿using bitLab.ViewModel;
+using loork_gui.Oscilloscope;
 using System;
 using System.Collections.Generic;
 using System.Linq;

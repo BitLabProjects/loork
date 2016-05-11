@@ -8,26 +8,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
-namespace loork_gui
+namespace loork_gui.Oscilloscope
 {
   class LoorkBoard
   {
-    private const int screenWidth = 400;
-    private const int screenHeight = 240;
-
-    private const float RefreshIntervalInSec = 1.0f / 30.0f;
-    private const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
-    private const int MarginTopBottom = 10;
-    private const int MaxSignalValue = 4096;
-    private int[] TimebaseSteps = new int[] {
-      1, 2, 5,
-      10, 20, 50,
-      100, 200, 500,
-      1 *1000, 2*1000, 5*1000,
-      //10*1000, 20*1000, 50*1000,
-      //100*1000, 200*1000, 500*1000};
-    };
-
     private byte[] mScreenBuffer;
     private SurfaceVM mSurfaceVM;
     private UserInterfaceVM mUserInterfaceVM;
@@ -44,30 +28,42 @@ namespace loork_gui
     private bool isWorking = false;
     private SignalAnalyzer mSignalAnalyzer;
     private bool mSettingsChanged;
+
+    private double mTriggerPercent;
     private int mMicrosecondsPerDivision;
 
     public LoorkBoard(Dispatcher dispatcher)
     {
       mDispatcher = dispatcher;
-      mScreenBuffer = new byte[screenWidth * screenHeight];
-      mSurfaceVM = new SurfaceVM(screenWidth, screenHeight, (x, y) => (byte)(mScreenBuffer[x * screenHeight + y]));
+      mScreenBuffer = new byte[Constants.ScreenWidth * Constants.ScreenHeight];
+      mSurfaceVM = new SurfaceVM(Constants.ScreenWidth, Constants.ScreenHeight, (x, y) => (byte)(mScreenBuffer[x * Constants.ScreenHeight + y]));
       mUserInterfaceVM = new UserInterfaceVM(this);
 
-      TriggerPercent = 50;
+      mTriggerPercent = 50;
       mMicrosecondsPerDivision = 100;
+      mSettingsChanged = true;
 
-
-      mChannel = new Channel(SamplesPerSecond);
+      mChannel = new Channel(Constants.SamplesPerSecond);
       isCounterStarted = false;
       counter = new QueryPerfCounter();
 
-      mSettingsChanged = true;
-
-      mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(RefreshIntervalInSec * 1000), (int)(RefreshIntervalInSec * 1000));
+      mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(Constants.RefreshIntervalInSec * 1000), (int)(Constants.RefreshIntervalInSec * 1000));
     }
 
-    public double TriggerPercent { get; set; }
-    public int MicrosecondsPerDivision {
+    public double TriggerPercent
+    {
+      get
+      {
+        return mTriggerPercent;
+      }
+      set
+      {
+        mTriggerPercent = value;
+        mSettingsChanged = true;
+      }
+    }
+    public int MicrosecondsPerDivision
+    {
       get
       {
         return mMicrosecondsPerDivision;
@@ -83,30 +79,30 @@ namespace loork_gui
 
     public void NextMicrosecondsPerDivision()
     {
-      for (var idxStep = 0; idxStep < TimebaseSteps.Length; idxStep++)
-        if (MicrosecondsPerDivision < TimebaseSteps[idxStep])
+      for (var idxStep = 0; idxStep < Constants.TimebaseSteps.Length; idxStep++)
+        if (MicrosecondsPerDivision < Constants.TimebaseSteps[idxStep])
         {
-          MicrosecondsPerDivision = TimebaseSteps[idxStep];
+          MicrosecondsPerDivision = Constants.TimebaseSteps[idxStep];
           return;
         }
     }
     public void PrevMicrosecondsPerDivision()
     {
-      for (var idxStep = TimebaseSteps.Length-1; idxStep > 0; idxStep--)
-        if (MicrosecondsPerDivision > TimebaseSteps[idxStep])
+      for (var idxStep = Constants.TimebaseSteps.Length-1; idxStep > 0; idxStep--)
+        if (MicrosecondsPerDivision > Constants.TimebaseSteps[idxStep])
         {
-          MicrosecondsPerDivision = TimebaseSteps[idxStep];
+          MicrosecondsPerDivision = Constants.TimebaseSteps[idxStep];
           return;
         }
     }
     private void Create()
     {
-      var samplesPerMicrosecond = (SamplesPerSecond / 1000000.0f);
+      var samplesPerMicrosecond = (Constants.SamplesPerSecond / 1000000.0f);
       samplesInScreenWidth = (int)Math.Ceiling(samplesPerMicrosecond * MicrosecondsPerDivision * 10);
       if (samplesInScreenWidth % 2 > 0)
         samplesInScreenWidth++;
 
-      mSignalAnalyzer = new SignalAnalyzer(samplesInScreenWidth / 2, samplesInScreenWidth / 2);
+      mSignalAnalyzer = new SignalAnalyzer(samplesInScreenWidth / 2, samplesInScreenWidth / 2, TriggerPercent);
     }
 
     private void mTimer_Tick(object state)
@@ -138,10 +134,9 @@ namespace loork_gui
       //Console.WriteLine("{0:0.0}", elapsedSeconds * 1000);
 
       intensity = (byte)((intensity + 1) % 255);
-      signalScaleWidth = screenWidth / (float)(samplesInScreenWidth-1);
-      signalScaleHeight = (screenHeight - 2 * MarginTopBottom) / (float)MaxSignalValue;
-      trigger = (int)(TriggerPercent / 100 * MaxSignalValue);
-      mSignalAnalyzer.TriggerThreshold = trigger;
+      signalScaleWidth = Constants.ScreenWidth / (float)(samplesInScreenWidth-1);
+      signalScaleHeight = (Constants.ScreenHeight - 2 * Constants.MarginTopBottom) / (float)Constants.MaxSignalValue;
+      trigger = (int)(TriggerPercent / 100 * Constants.MaxSignalValue);
 
       unsafe
       {
@@ -150,35 +145,35 @@ namespace loork_gui
 
         fixed (byte* screenPtrStart = mScreenBuffer)
         {
-          var renderer = new Renderer(screenPtrStart, screenWidth, screenHeight);
+          var renderer = new Renderer(screenPtrStart, Constants.ScreenWidth, Constants.ScreenHeight);
           renderer.Clear();
           mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr) =>
           {
             renderer.Plot(samplesPtr - samplesInScreenWidth / 2, 
                           samplesPtr + samplesInScreenWidth / 2, 
                           signalScaleWidth, 
-                          signalScaleHeight, 
-                          MarginTopBottom);
+                          signalScaleHeight,
+                          Constants.MarginTopBottom);
           });
 
-          var conditionedTrigger = (int)(trigger * signalScaleHeight + MarginTopBottom);
-          renderer.Line(0, conditionedTrigger, screenWidth - 1, conditionedTrigger);
+          var conditionedTrigger = (int)(trigger * signalScaleHeight + Constants.MarginTopBottom);
+          renderer.Line(0, conditionedTrigger, Constants.ScreenWidth - 1, conditionedTrigger);
 
           //Grid
-          var divisionSize = (int)(screenWidth / 10);
+          var divisionSize = (int)(Constants.ScreenWidth / 10);
           for (int x = 1; x < 10; x++)
           {
             var repetitions = x == 5 ? 3 : 1;
             for(var rep = 0; rep < repetitions; rep++)
-              renderer.Line(x * divisionSize, 0, x*divisionSize, screenHeight);
+              renderer.Line(x * divisionSize, 0, x*divisionSize, Constants.ScreenHeight);
           }
 
-          var divisionsFittingHeightCount = screenHeight / divisionSize;
+          var divisionsFittingHeightCount = Constants.ScreenHeight / divisionSize;
           for (int y = 1; y < divisionsFittingHeightCount; y++)
           {
             var repetitions = y == divisionsFittingHeightCount/2 ? 3 : 1;
             for (var rep = 0; rep < repetitions; rep++)
-              renderer.Line(0, y * divisionSize, screenWidth,  y * divisionSize);
+              renderer.Line(0, y * divisionSize, Constants.ScreenWidth,  y * divisionSize);
           }
         }
       }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace loork_gui
+namespace loork_gui.Oscilloscope
 {
   unsafe class SamplesBuffer
   {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace loork_gui
+namespace loork_gui.Oscilloscope
 {
   unsafe class SignalAnalyzer
   {
@@ -12,24 +12,23 @@ namespace loork_gui
     private SamplesBuffer mSamplesBuffer2;
     private SamplesBuffer mLastSamplesBuffer;
     private int mLastSamplesBufferCount;
-    private int mLastSamplesBufferRemainingCount;
     private int mTriggerSamplesBeforeCount;
     private int mTriggerSamplesAfterCount;
+    private int mTriggerSample;
 
-    public SignalAnalyzer(int triggerSamplesBeforeCount, int triggerSamplesAfterCount)
+    public SignalAnalyzer(int triggerSamplesBeforeCount,
+                          int triggerSamplesAfterCount,
+                          double triggerPercent)
     {
       const int BufferSize = 4000;
       mSamplesBuffer1 = new SamplesBuffer(BufferSize, triggerSamplesBeforeCount);
       mSamplesBuffer2 = new SamplesBuffer(BufferSize, triggerSamplesBeforeCount);
       mLastSamplesBuffer = mSamplesBuffer2;//Start with buffer 2 so the buffer 1 is the first one filled
       mLastSamplesBufferCount = 0;
-      mLastSamplesBufferRemainingCount = 0;
       mTriggerSamplesBeforeCount = triggerSamplesBeforeCount;
       mTriggerSamplesAfterCount = triggerSamplesAfterCount;
-      TriggerThreshold = 2048;
+      mTriggerSample = (int)(triggerPercent / 100 * Constants.MaxSignalValue);
     }
-
-    public int TriggerThreshold;
 
     public SamplesBuffer GetBufferToFill()
     {
@@ -56,7 +55,7 @@ namespace loork_gui
         //Avoid triggering if already above
         while (samplesPtr != lastPtrToSearchTrigger)
         {
-          if (*samplesPtr < TriggerThreshold)
+          if (*samplesPtr < mTriggerSample)
           {
             break;
           }
@@ -65,7 +64,7 @@ namespace loork_gui
 
         while (samplesPtr != lastPtrToSearchTrigger)
         {
-          if (*samplesPtr > TriggerThreshold)
+          if (*samplesPtr > mTriggerSample)
           {
             var skipTrigger = false;
             //You always have mTriggerSamplesAfterCount leftover samples from the previous run (Except for the first one)
@@ -100,7 +99,7 @@ namespace loork_gui
             //TODO mLastTriggerSampleIdx = (mLastTriggerSampleIdx + mTriggerSamplesAfterCount) % mSamples.Length;
             while (samplesPtr != lastPtrToSearchTrigger)
             {
-              if (*samplesPtr < TriggerThreshold)
+              if (*samplesPtr < mTriggerSample)
               {
                 break;
               }
