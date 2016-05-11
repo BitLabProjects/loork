@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
@@ -15,7 +16,7 @@ namespace loork_gui.Oscilloscope
     private byte[] mScreenBuffer;
     private SurfaceVM mSurfaceVM;
     private Dispatcher mDispatcher;
-    private System.Threading.Timer mTimer;
+    private Timer mTimer;
     private bool isCounterStarted;
     private Channel mChannel;
     private QueryPerfCounter counter;

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "loork-gui", "loork-gui.csproj", "{48BE4BEE-ED32-4A16-97C0-C3E715345905}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "loork", "loork.csproj", "{48BE4BEE-ED32-4A16-97C0-C3E715345905}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bitLab.ViewModel", "bitLab.ViewModel\bitLab.ViewModel.csproj", "{830D827E-3603-4564-ADCD-A084F5581FD1}"
 EndProject
