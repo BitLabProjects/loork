@@ -43,7 +43,7 @@ namespace loork_gui.Oscilloscope
     //Called when a trigger sample has been found
     //The trigger search algorithm calls the callback only when the TriggerSamplesBeforeCount and TriggerSamplesAfterCount are satisfied
     //The callback code can go forward and backward safely on the pointer by the requested samples count
-    public delegate void OnTriggerCallbackDelegate(int* samplePtr);
+    public delegate void OnTriggerCallbackDelegate(int* samplePtr, float offsetPercent);
 
     public void InputSamples(int samplesCount, OnTriggerCallbackDelegate onTriggerCallback)
     {
@@ -95,7 +95,14 @@ namespace loork_gui.Oscilloscope
             }
 
             if (!skipTrigger)
-              onTriggerCallback(samplesPtr);
+            {
+              //Calulate offset between previous sample and current sample of the exact trigger location, in percent of sample duration
+              var sample = *samplesPtr;
+              var prevSample = *(samplesPtr - 1);
+              var offsetPercent = ((float)mTriggerSample - prevSample) / (sample - prevSample);
+
+              onTriggerCallback(samplesPtr, offsetPercent);
+            }
 
             //Discard samples still above the trigger, do avoid triggering by mistake.
             //TODO mLastTriggerSampleIdx = (mLastTriggerSampleIdx + mTriggerSamplesAfterCount) % mSamples.Length;

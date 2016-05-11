@@ -144,12 +144,13 @@ namespace loork_gui.Oscilloscope
         {
           var renderer = new Renderer(screenPtrStart, Constants.ScreenWidth, Constants.ScreenHeight);
           renderer.Clear();
-          mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr) =>
+          mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr, float offsetPercent) =>
           {
             renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2, 
                           samplesPtr + mSamplesInScreenWidth / 2, 
                           mSignalScaleWidth, 
                           mSignalScaleHeight,
+                          -offsetPercent * mSignalScaleWidth,
                           Constants.MarginTopBottom);
           });
 

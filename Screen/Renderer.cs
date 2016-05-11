@@ -32,7 +32,10 @@ namespace loork_gui
         *screenPtr = 230;
     }
 
-    public void Plot(int* samplesPtrStart, int* samplesPtrEnd, float signalScaleWidth, float signalScaleHeight, int marginTopBottom)
+    public void Plot(int* samplesPtrStart, int* samplesPtrEnd, 
+                     float signalScaleWidth, float signalScaleHeight, 
+                     float offset,
+                     int marginTopBottom)
     {
       var samplesPtr = samplesPtrStart;
       var prevConditionedSample = (*samplesPtr++) * signalScaleHeight + marginTopBottom;
@@ -41,15 +44,35 @@ namespace loork_gui
       {
         var currConditionedSample = (*samplesPtr++) * signalScaleHeight + marginTopBottom;
         x++;
-        Line((int)((x - 1) * signalScaleWidth), 
-             (int)prevConditionedSample, 
-             (int)(x * signalScaleWidth), 
-             (int)currConditionedSample);
+        LineClipX((int)((x - 1) * signalScaleWidth + offset), 
+                  (int)prevConditionedSample, 
+                  (int)(x * signalScaleWidth + offset), 
+                  (int)currConditionedSample);
         prevConditionedSample = currConditionedSample;
       }
     }
 
-    public void Line(int x1, int y1, int x2, int y2)
+    //Assume:
+    //1) x1 < x2
+    //2) Only one of x1 and x2 can be outside
+    private void LineClipX(int x1, int y1,
+                           int x2, int y2)
+    {
+      if (x1 < 0)
+      {
+        y1 = y1 + (y2 - y1) * (0 - x1) / (x2 - x1);
+        x1 = 0;
+      }
+      else if (x2 >= mScreenWidth)
+      {
+        y2 = y1 + (y2 - y1) * (mScreenWidth-1 - x1) / (x2 - x1);
+        x2 = mScreenWidth-1;
+      }
+      Line(x1, y1, x2, y2);
+    }
+
+    public void Line(int x1, int y1, 
+                     int x2, int y2)
     {
       var swap = false;
       var DX = x2 - x1;
