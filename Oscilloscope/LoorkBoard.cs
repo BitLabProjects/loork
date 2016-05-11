@@ -41,7 +41,7 @@ namespace loork_gui
       mDispatcher = dispatcher;
       mScreenBuffer = new byte[screenWidth * screenHeight];
       mSurfaceVM = new SurfaceVM(screenWidth, screenHeight, (x, y) => (byte)(mScreenBuffer[x * screenHeight + y]));
-      mUserInterfaceVM = new UserInterfaceVM();
+      mUserInterfaceVM = new UserInterfaceVM(this);
 
       TriggerPercent = 50;
       MicrosecondsPerDivision = 100;

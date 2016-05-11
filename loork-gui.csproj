@@ -61,6 +61,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Controls\Knob.xaml.cs">
+      <DependentUpon>Knob.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Oscilloscope\Channel.cs" />
     <Compile Include="Screen\Renderer.cs" />
     <Compile Include="Oscilloscope\SamplesBuffer.cs" />
@@ -68,6 +71,10 @@
     <Compile Include="ViewModel\SurfaceVM.cs" />
     <Compile Include="Oscilloscope\LoorkBoard.cs" />
     <Compile Include="ViewModel\UserInterfaceVM.cs" />
+    <Page Include="Controls\Knob.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

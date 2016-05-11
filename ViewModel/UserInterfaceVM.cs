@@ -16,19 +16,26 @@ namespace loork_gui
 
   class UserInterfaceVM: CBaseVM
   {
-    public UserInterfaceVM()
+    private LoorkBoard mBoard;
+
+    public UserInterfaceVM(LoorkBoard board)
     {
+      mBoard = board;
       SetTriggerLevelFunctionality = new CDelegateCommand(mSetTriggerLevelFunctionality);
       SetMicrosecondsPerDivisionFunctionality = new CDelegateCommand(mSetMicrosecondsPerDivisionFunctionality);
+      UpdateValueFromKnob = new CDelegateCommand(mUpdateValueFromKnob);
     }
 
+    #region Properties
     private Functionality mCurrentFunctionality;
     public Functionality CurrentFunctionality
     {
       get { return mCurrentFunctionality; }
       set { SetAndNotify(ref mCurrentFunctionality, value); }
     }
+    #endregion
 
+    #region Commands
     public CDelegateCommand SetTriggerLevelFunctionality { get; private set; }
     private void mSetTriggerLevelFunctionality(object arg)
     {
@@ -40,5 +47,21 @@ namespace loork_gui
     {
       CurrentFunctionality = Functionality.MicrosecondsPerDivision;
     }
+
+    public CDelegateCommand UpdateValueFromKnob { get; private set; }
+    private void mUpdateValueFromKnob(object arg)
+    {
+      var delta = (double)arg;
+      switch (CurrentFunctionality)
+      {
+        case Functionality.TriggerLevel:
+          var newTriggerPercent = mBoard.TriggerPercent + delta / 4;
+          newTriggerPercent = newTriggerPercent > 100 ? 100 : newTriggerPercent;
+          newTriggerPercent = newTriggerPercent < 0 ? 0 : newTriggerPercent;
+          mBoard.TriggerPercent = newTriggerPercent;
+          break;
+      }
+    }
+    #endregion
   }
 }
