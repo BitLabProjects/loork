@@ -1,0 +1,16 @@
+== loork
+An oscilloscope written in C#
+
+== Instructions
+* Open a git console and:
+{{{
+git clone https://github.com/BitLabProjects/loork.git loork
+cd loork
+git submodule init
+git submodule update
+}}}
+* Create a folder 'libs' and download and extract NAudio into it
+{{{
+https://naudio.codeplex.com/downloads/get/1436305
+}}}
+* Now you're ready to build, open the solution and hit F5!
