@@ -13,9 +13,9 @@
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
     <Image Source="{Binding SurfaceVM.Image}" Stretch="None" Width="400" Height="240" />
-    <StackPanel Grid.Column="1" Orientation="Vertical">
-      <Button Width="60" Height="38" Margin="5" />
-      <Button Width="60" Height="38" Margin="5" />
+    <StackPanel Grid.Column="1" Orientation="Vertical" DataContext="{Binding UserInterfaceVM}">
+      <Button Width="60" Height="38" Margin="5" Content="Trigger" Command="{Binding SetTriggerLevelFunctionality}" />
+      <Button Width="60" Height="38" Margin="5" Content="Timebase" Command="{Binding SetMicrosecondsPerDivisionFunctionality}" />
       <Button Width="60" Height="38" Margin="5" />
       <Button Width="60" Height="38" Margin="5" />
       <Button Width="60" Height="38" Margin="5" />

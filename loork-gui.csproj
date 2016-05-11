@@ -61,14 +61,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Channel.cs" />
-    <Compile Include="QueryPerfCounter.cs" />
-    <Compile Include="Renderer.cs" />
-    <Compile Include="SamplesBuffer.cs" />
-    <Compile Include="SignalAnalyzer.cs" />
-    <Compile Include="SurfaceVM.cs" />
-    <Compile Include="LoorkBoard.cs" />
-    <Compile Include="UserInterface.cs" />
+    <Compile Include="Oscilloscope\Channel.cs" />
+    <Compile Include="Screen\Renderer.cs" />
+    <Compile Include="Oscilloscope\SamplesBuffer.cs" />
+    <Compile Include="Oscilloscope\SignalAnalyzer.cs" />
+    <Compile Include="ViewModel\SurfaceVM.cs" />
+    <Compile Include="Oscilloscope\LoorkBoard.cs" />
+    <Compile Include="ViewModel\UserInterfaceVM.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -110,6 +109,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="bitLab.Log\bitLab.Log.csproj">
+      <Project>{a25dc3f3-71df-4145-93e3-a7c5eca652b1}</Project>
+      <Name>bitLab.Log</Name>
+    </ProjectReference>
     <ProjectReference Include="bitLab.ViewModel\bitLab.ViewModel.csproj">
       <Project>{830d827e-3603-4564-adcd-a084f5581fd1}</Project>
       <Name>bitLab.ViewModel</Name>

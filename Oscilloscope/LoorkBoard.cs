@@ -1,4 +1,5 @@
-﻿using System;
+﻿using bitLab.Log;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO.Ports;
@@ -19,10 +20,9 @@ namespace loork_gui
     private const int MarginTopBottom = 10;
     private const int MaxSignalValue = 4096;
 
-    private bool mSyncReceived;
     private byte[] mScreenBuffer;
-    private int mScreenBufferIdx;
     private SurfaceVM mSurfaceVM;
+    private UserInterfaceVM mUserInterfaceVM;
     private Dispatcher mDispatcher;
     private System.Threading.Timer mTimer;
     private int samplesInScreenWidth;
@@ -40,9 +40,8 @@ namespace loork_gui
     {
       mDispatcher = dispatcher;
       mScreenBuffer = new byte[screenWidth * screenHeight];
-      mScreenBufferIdx = 0;
       mSurfaceVM = new SurfaceVM(screenWidth, screenHeight, (x, y) => (byte)(mScreenBuffer[x * screenHeight + y]));
-      mSyncReceived = false;
+      mUserInterfaceVM = new UserInterfaceVM();
 
       TriggerPercent = 50;
       MicrosecondsPerDivision = 100;
@@ -65,6 +64,7 @@ namespace loork_gui
     public double TriggerPercent { get; set; }
     public int MicrosecondsPerDivision { get; set; }
     public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
+    public UserInterfaceVM UserInterfaceVM { get { return mUserInterfaceVM; } }
 
     private void mTimer_Tick(object state)
     {

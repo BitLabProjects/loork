@@ -14,9 +14,9 @@ namespace loork_gui
     MicrosecondsPerDivision,
   }
 
-  class UserInterface: CBaseVM
+  class UserInterfaceVM: CBaseVM
   {
-    public UserInterface()
+    public UserInterfaceVM()
     {
       SetTriggerLevelFunctionality = new CDelegateCommand(mSetTriggerLevelFunctionality);
       SetMicrosecondsPerDivisionFunctionality = new CDelegateCommand(mSetMicrosecondsPerDivisionFunctionality);
