@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace loork_gui
 {
-  unsafe class Renderer
+  unsafe class ChannelRenderer
   {
-    const byte drawOpacity = (byte)(0.15 * 255); // 30%;
+    const byte drawOpacity = 1; //(byte)(0.05 * 255); // 30%;
 
     private byte* mScreenPtrStart;
     private int mScreenWidth;
     private int mScreenHeight;
 
-    public Renderer(byte* screenPtrStart, int screenWidth, int screenHeight)
+    public ChannelRenderer(byte* screenPtrStart, int screenWidth, int screenHeight)
     {
       mScreenPtrStart = screenPtrStart;
       mScreenWidth = screenWidth;
@@ -29,7 +29,7 @@ namespace loork_gui
       //Blank screen
       var screenPtr = mScreenPtrStart;
       while (screenPtr++ < screenPtrEnd)
-        *screenPtr = 230;
+        *screenPtr = 0;
     }
 
     public void Plot(int* samplesPtrStart, int* samplesPtrEnd, 
@@ -71,8 +71,8 @@ namespace loork_gui
       Line(x1, y1, x2, y2);
     }
 
-    public void Line(int x1, int y1, 
-                     int x2, int y2)
+    private void Line(int x1, int y1, 
+                      int x2, int y2)
     {
       var swap = false;
       var DX = x2 - x1;
@@ -108,7 +108,7 @@ namespace loork_gui
       var pixelPtr = mScreenPtrStart + x1 * mScreenHeight + y1;
       //draw pixel
       var value = *pixelPtr;
-      *pixelPtr = value > drawOpacity ? (byte)(value - drawOpacity) : (byte)0;
+      *pixelPtr = value < 255 ? (byte)(value + drawOpacity) : (byte)255;
 
       for (var k = 0; k < -b-1; k += 1)
       {
@@ -130,7 +130,8 @@ namespace loork_gui
 
         //draw pixel
         value = *pixelPtr;
-        *pixelPtr = value > drawOpacity ? (byte)(value - drawOpacity) : (byte)0;
+        //*pixelPtr = value > drawOpacity ? (byte)(value - drawOpacity) : (byte)0;
+        *pixelPtr = value < 255 ? (byte)(value + drawOpacity) : (byte)255;
       }
     }
   }

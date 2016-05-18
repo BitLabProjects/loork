@@ -1,4 +1,5 @@
 ﻿using bitLab.Log;
+using loork_gui.Screen;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,10 +12,11 @@ using System.Windows.Threading;
 
 namespace loork_gui.Oscilloscope
 {
-  class LoorkBoard
+  unsafe class LoorkBoard
   {
-    private byte[] mScreenBuffer;
-    private SurfaceVM mSurfaceVM;
+    private byte[] mScreenBufferHud;
+    private byte[] mScreenBufferCh1;
+    private ScreenSurface mScreenSurface;
     private Dispatcher mDispatcher;
     private Timer mTimer;
     private bool isCounterStarted;
@@ -35,8 +37,9 @@ namespace loork_gui.Oscilloscope
     public LoorkBoard(Dispatcher dispatcher)
     {
       mDispatcher = dispatcher;
-      mScreenBuffer = new byte[Constants.ScreenWidth * Constants.ScreenHeight];
-      mSurfaceVM = new SurfaceVM(Constants.ScreenWidth, Constants.ScreenHeight, (x, y) => (byte)(mScreenBuffer[x * Constants.ScreenHeight + y]));
+      mScreenBufferCh1 = new byte[Constants.ScreenWidth * Constants.ScreenHeight];
+      mScreenBufferHud = new byte[Constants.ScreenWidth * Constants.ScreenHeight * 3];
+      mScreenSurface = new ScreenSurface(Constants.ScreenWidth, Constants.ScreenHeight, mScreenBufferHud, mScreenBufferCh1);
 
       mTriggerPercent = 50;
       mMicrosecondsPerDivision = 100;
@@ -76,7 +79,7 @@ namespace loork_gui.Oscilloscope
     }
     #endregion
 
-    public SurfaceVM SurfaceVM { get { return mSurfaceVM; } }
+    public ScreenSurface ScreenSurface { get { return mScreenSurface; } }
 
     public void NextMicrosecondsPerDivision()
     {
@@ -109,6 +112,38 @@ namespace loork_gui.Oscilloscope
       mSignalAnalyzer = new SignalAnalyzer(mSamplesInScreenWidth / 2, mSamplesInScreenWidth / 2, TriggerPercent);
     }
 
+    private void mRenderHud()
+    {
+      fixed (byte* screenPtrStartHud = mScreenBufferHud)
+      {
+        var renderer = new HudRenderer(screenPtrStartHud, Constants.ScreenWidth, Constants.ScreenHeight);
+        renderer.Clear();
+
+        var conditionedTrigger = (int)(mSignalAnalyzer.TriggerSample * mSignalScaleHeight + Constants.MarginTopBottom);
+        renderer.Line(0, conditionedTrigger, Constants.ScreenWidth - 1, conditionedTrigger,
+                      100, 100, 100);
+
+        //Grid
+        var divisionSize = (int)(Constants.ScreenWidth / 10);
+        for (int x = 1; x < 10; x++)
+        {
+          var repetitions = x == 5 ? 3 : 1;
+          for (var rep = 0; rep < repetitions; rep++)
+            renderer.Line(x * divisionSize, 0, x * divisionSize, Constants.ScreenHeight,
+                          150, 150, 150);
+        }
+
+        var divisionsFittingHeightCount = Constants.ScreenHeight / divisionSize;
+        for (int y = 1; y < divisionsFittingHeightCount; y++)
+        {
+          var repetitions = y == divisionsFittingHeightCount / 2 ? 3 : 1;
+          for (var rep = 0; rep < repetitions; rep++)
+            renderer.Line(0, y * divisionSize, Constants.ScreenWidth, y * divisionSize,
+                          150, 150, 150);
+        }
+      }
+    }
+
     private void mTimer_Tick(object state)
     {
       if (!isCounterStarted)
@@ -132,53 +167,31 @@ namespace loork_gui.Oscilloscope
       if (mSettingsChanged)
       {
         Create();
+        mRenderHud();
         mSettingsChanged = false;
       }
 
-      unsafe
+      int channelSamplesCount;
+      mChannel.Capture(elapsedSeconds, mSignalAnalyzer.GetBufferToFill(), out channelSamplesCount);
+
+      fixed (byte* screenPtrStartCh1 = mScreenBufferCh1)
       {
-        int channelSamplesCount;
-        mChannel.Capture(elapsedSeconds, mSignalAnalyzer.GetBufferToFill(), out channelSamplesCount);
-
-        fixed (byte* screenPtrStart = mScreenBuffer)
+        var renderer = new ChannelRenderer(screenPtrStartCh1, Constants.ScreenWidth, Constants.ScreenHeight);
+        renderer.Clear();
+        mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr, float offsetPercent) =>
         {
-          var renderer = new Renderer(screenPtrStart, Constants.ScreenWidth, Constants.ScreenHeight);
-          renderer.Clear();
-          mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr, float offsetPercent) =>
-          {
-            renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2, 
-                          samplesPtr + mSamplesInScreenWidth / 2, 
-                          mSignalScaleWidth, 
-                          mSignalScaleHeight,
-                          -offsetPercent * mSignalScaleWidth,
-                          Constants.MarginTopBottom);
-          });
-
-          var conditionedTrigger = (int)(mSignalAnalyzer.TriggerSample * mSignalScaleHeight + Constants.MarginTopBottom);
-          renderer.Line(0, conditionedTrigger, Constants.ScreenWidth - 1, conditionedTrigger);
-
-          //Grid
-          var divisionSize = (int)(Constants.ScreenWidth / 10);
-          for (int x = 1; x < 10; x++)
-          {
-            var repetitions = x == 5 ? 3 : 1;
-            for(var rep = 0; rep < repetitions; rep++)
-              renderer.Line(x * divisionSize, 0, x*divisionSize, Constants.ScreenHeight);
-          }
-
-          var divisionsFittingHeightCount = Constants.ScreenHeight / divisionSize;
-          for (int y = 1; y < divisionsFittingHeightCount; y++)
-          {
-            var repetitions = y == divisionsFittingHeightCount/2 ? 3 : 1;
-            for (var rep = 0; rep < repetitions; rep++)
-              renderer.Line(0, y * divisionSize, Constants.ScreenWidth,  y * divisionSize);
-          }
-        }
+          renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2, 
+                        samplesPtr + mSamplesInScreenWidth / 2, 
+                        mSignalScaleWidth, 
+                        mSignalScaleHeight,
+                        -offsetPercent * mSignalScaleWidth,
+                        Constants.MarginTopBottom);
+        });
       }
 
       try
       {
-        mDispatcher.Invoke(() => mSurfaceVM.RefreshAll());
+        mDispatcher.Invoke(() => mScreenSurface.RefreshAll());
       }
       catch (TaskCanceledException)
       {

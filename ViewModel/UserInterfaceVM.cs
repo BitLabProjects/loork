@@ -1,5 +1,6 @@
 ﻿using bitLab.ViewModel;
 using loork_gui.Oscilloscope;
+using loork_gui.Screen;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +36,7 @@ namespace loork_gui
       get { return mCurrentFunctionality; }
       set { SetAndNotify(ref mCurrentFunctionality, value); }
     }
-    public SurfaceVM SurfaceVM { get { return mBoard.SurfaceVM; } }
+    public ScreenSurface ScreenSurface { get { return mBoard.ScreenSurface; } }
     #endregion
 
     #region Commands

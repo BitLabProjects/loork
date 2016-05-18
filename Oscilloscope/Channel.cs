@@ -33,8 +33,8 @@ namespace loork_gui.Oscilloscope
         mWave[i] = (int)(2048 + 1800 * Math.Sin(2 * Math.PI * t));
       }
 
-      mAudioReader = new Mp3FileReader("..\\..\\in_the_raw.mp3");
-      //mAudioReader = new Mp3FileReader("..\\..\\chirp.mp3");
+      //mAudioReader = new Mp3FileReader("..\\..\\in_the_raw.mp3");
+      mAudioReader = new Mp3FileReader("..\\..\\chirp.mp3");
     }
 
     public int SamplesPerSecond { get { return mSamplesPerSecond; } }
@@ -49,8 +49,8 @@ namespace loork_gui.Oscilloscope
         samplesCaptured = bufferToFill.Length;
       }
 
-      Capture_AudioFile(bufferToFill, samplesCaptured);
-      //Capture_SineWave(bufferToFill, samplesCaptured);
+      //Capture_AudioFile(bufferToFill, samplesCaptured);
+      Capture_SineWave(bufferToFill, samplesCaptured);
     }
 
     public void Capture_AudioFile(SamplesBuffer bufferToFill, int samplesCaptured)

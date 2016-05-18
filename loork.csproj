@@ -66,10 +66,11 @@
     </Compile>
     <Compile Include="Oscilloscope\Channel.cs" />
     <Compile Include="Oscilloscope\Constants.cs" />
-    <Compile Include="Screen\Renderer.cs" />
+    <Compile Include="Screen\HudRenderer.cs" />
+    <Compile Include="Screen\ChannelRenderer.cs" />
     <Compile Include="Oscilloscope\SamplesBuffer.cs" />
     <Compile Include="Oscilloscope\SignalAnalyzer.cs" />
-    <Compile Include="ViewModel\SurfaceVM.cs" />
+    <Compile Include="Screen\ScreenSurface.cs" />
     <Compile Include="Oscilloscope\LoorkBoard.cs" />
     <Compile Include="ViewModel\UserInterfaceVM.cs" />
     <Page Include="Controls\Knob.xaml">
