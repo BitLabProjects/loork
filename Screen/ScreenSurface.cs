@@ -48,7 +48,6 @@ namespace loork_gui.Screen
         var ptr = (byte*)mImage.BackBuffer;
         ptr += rY * mImage.BackBufferStride + rX * bytesPerPixel;
 
-        var max = 0;
         for (int y = rY; y < rY + rHeight; y++)
         {
           for (int x = rX; x < rX + rWidth; x++)
@@ -82,7 +81,6 @@ namespace loork_gui.Screen
           }
           ptr += mImage.BackBufferStride - rWidth * bytesPerPixel;
         }
-        System.Diagnostics.Debug.WriteLine(max);
       }
       mImage.AddDirtyRect(new System.Windows.Int32Rect(rX, rY, rWidth, rHeight));
       mImage.Unlock();
