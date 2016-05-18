@@ -99,7 +99,8 @@ namespace loork_gui.Oscilloscope
               //Calulate offset between previous sample and current sample of the exact trigger location, in percent of sample duration
               var sample = *samplesPtr;
               var prevSample = *(samplesPtr - 1);
-              var offsetPercent = ((float)mTriggerSample - prevSample) / (sample - prevSample);
+              //-0.5f found by empirical programming
+              var offsetPercent = ((float)mTriggerSample - prevSample) / (sample - prevSample) - 0.5f;
 
               onTriggerCallback(samplesPtr, offsetPercent);
             }
