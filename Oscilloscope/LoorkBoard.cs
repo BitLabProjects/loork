@@ -92,7 +92,7 @@ namespace loork_gui.Oscilloscope
     }
     public void PrevMicrosecondsPerDivision()
     {
-      for (var idxStep = Constants.TimebaseSteps.Length-1; idxStep > 0; idxStep--)
+      for (var idxStep = Constants.TimebaseSteps.Length - 1; idxStep > 0; idxStep--)
         if (MicrosecondsPerDivision > Constants.TimebaseSteps[idxStep])
         {
           MicrosecondsPerDivision = Constants.TimebaseSteps[idxStep];
@@ -180,9 +180,9 @@ namespace loork_gui.Oscilloscope
         renderer.Clear();
         mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr, float offsetPercent) =>
         {
-          renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2, 
-                        samplesPtr + mSamplesInScreenWidth / 2, 
-                        mSignalScaleWidth, 
+          renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
+                        samplesPtr + mSamplesInScreenWidth / 2,
+                        mSignalScaleWidth,
                         mSignalScaleHeight,
                         -offsetPercent * mSignalScaleWidth,
                         Constants.MarginTopBottom);
