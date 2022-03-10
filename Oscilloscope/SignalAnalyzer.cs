@@ -32,6 +32,8 @@ namespace loork_gui.Oscilloscope
 
     public int TriggerSample { get { return mTriggerSample; } }
 
+    public int MinSampleCount { get { return mTriggerSamplesBeforeCount + mTriggerSamplesAfterCount; } }
+
     public SamplesBuffer GetBufferToFill()
     {
       if (mLastSamplesBuffer == mSamplesBuffer1)
@@ -54,7 +56,7 @@ namespace loork_gui.Oscilloscope
         var lastPtrToSearchTrigger = samplesPtrStart + (samplesCount - mTriggerSamplesAfterCount - 1);
 
         var samplesPtr = samplesPtrStart;// + mTriggerSamplesBeforeCount;
-        //Avoid triggering if already above
+        //Search the first sample below the trigger point
         while (samplesPtr != lastPtrToSearchTrigger)
         {
           if (*samplesPtr < mTriggerSample)
@@ -106,7 +108,6 @@ namespace loork_gui.Oscilloscope
             }
 
             //Discard samples still above the trigger, do avoid triggering by mistake.
-            //TODO mLastTriggerSampleIdx = (mLastTriggerSampleIdx + mTriggerSamplesAfterCount) % mSamples.Length;
             while (samplesPtr != lastPtrToSearchTrigger)
             {
               if (*samplesPtr < mTriggerSample)
@@ -122,6 +123,7 @@ namespace loork_gui.Oscilloscope
           }
         }
       }
+      filledBuffer.FilledLength = 0;
       mLastSamplesBuffer = filledBuffer;
       mLastSamplesBufferCount = samplesCount;
     }

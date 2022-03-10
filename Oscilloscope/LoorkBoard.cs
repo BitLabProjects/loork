@@ -3,6 +3,7 @@ using loork_gui.Screen;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
@@ -176,15 +177,19 @@ namespace loork_gui.Oscilloscope
       }
 
       int channelSamplesCount;
-      mChannel.Capture(elapsedSeconds, mSignalAnalyzer.GetBufferToFill(), out channelSamplesCount);
+      var samplesBuffer = mSignalAnalyzer.GetBufferToFill();
+      mChannel.Capture(elapsedSeconds, samplesBuffer, out channelSamplesCount);
 
-      if (channelSamplesCount > 0)
+      // TODO Move away from here
+      Debug.Assert(samplesBuffer.Length >= mSignalAnalyzer.MinSampleCount, "The buffer must be larger than the minimum samples length");
+
+      if (samplesBuffer.FilledLength >= mSignalAnalyzer.MinSampleCount)
       {
         fixed (byte* screenPtrStartCh1 = mScreenBufferCh1)
         {
           var renderer = new ChannelRenderer(screenPtrStartCh1, Constants.ScreenWidth, Constants.ScreenHeight);
           renderer.Clear();
-          mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr, float offsetPercent) =>
+          mSignalAnalyzer.InputSamples(samplesBuffer.FilledLength, (int* samplesPtr, float offsetPercent) =>
           {
             renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
                           samplesPtr + mSamplesInScreenWidth / 2,

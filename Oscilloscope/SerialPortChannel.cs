@@ -51,26 +51,39 @@ namespace loork_gui.Oscilloscope
 
     public override void Capture(float secondsPassed, SamplesBuffer bufferToFill, out int samplesCaptured)
     {
-      if (mPort.BytesToRead < 1000)
+      var bytesToRead = mPort.BytesToRead;
+      if (bytesToRead % 2 == 1)
+      {
+        bytesToRead -= 1;
+      }
+      if (bytesToRead < 2)
       {
         samplesCaptured = 0;
         return;
       }
 
-      samplesCaptured = mPort.BytesToRead / 2;
-      if (bufferToFill.StartIdx + samplesCaptured > bufferToFill.Buffer.Length)
+      var inputBuffer = new byte[4000 * 2]; // Buffer for 4k samples
+      bytesToRead = Math.Min(bytesToRead, inputBuffer.Length);
+
+      var readBytes = mPort.Read(inputBuffer, 0, bytesToRead);
+      if (readBytes != bytesToRead)
+      {
+        throw new InvalidOperationException("Less bytes recevived than expected");
+      }
+
+      samplesCaptured = bytesToRead / 2;
+      //if (bufferToFill.StartIdx + samplesCaptured > bufferToFill.Buffer.Length)
+      if (samplesCaptured > bufferToFill.AvailableLength)
       {
         //throw new ArgumentException("Too much time passed, not enough buffer");
         Console.WriteLine("Overflow");
-        samplesCaptured = bufferToFill.Length - bufferToFill.StartIdx;
+        samplesCaptured = bufferToFill.AvailableLength;
       }
-
-      var inputBuffer = new byte[samplesCaptured * 2];
-      mPort.Read(inputBuffer, 0, inputBuffer.Length);
 
       unsafe
       {
-        fixed (int* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
+        var startIdx = bufferToFill.AllocateFillRegionReturnStartIdx(samplesCaptured);
+        fixed (int* bufferStart = &bufferToFill.Buffer[startIdx])
         {
           int* buffer = bufferStart;
           fixed (byte* inputStart = &inputBuffer[0])
