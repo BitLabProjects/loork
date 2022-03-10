@@ -45,7 +45,11 @@ namespace loork_gui.Oscilloscope
       mMicrosecondsPerDivision = 100;
       mSettingsChanged = true;
 
-      mChannel = new Channel(Constants.SamplesPerSecond);
+      //mChannel = new Channel(Constants.SamplesPerSecond);
+      var spc= new SerialPortChannel(100, "COM4");
+      spc.TryOpen();
+      mChannel = spc;
+
       isCounterStarted = false;
       counter = new QueryPerfCounter();
 
@@ -174,19 +178,22 @@ namespace loork_gui.Oscilloscope
       int channelSamplesCount;
       mChannel.Capture(elapsedSeconds, mSignalAnalyzer.GetBufferToFill(), out channelSamplesCount);
 
-      fixed (byte* screenPtrStartCh1 = mScreenBufferCh1)
+      if (channelSamplesCount > 0)
       {
-        var renderer = new ChannelRenderer(screenPtrStartCh1, Constants.ScreenWidth, Constants.ScreenHeight);
-        renderer.Clear();
-        mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr, float offsetPercent) =>
+        fixed (byte* screenPtrStartCh1 = mScreenBufferCh1)
         {
-          renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
-                        samplesPtr + mSamplesInScreenWidth / 2,
-                        mSignalScaleWidth,
-                        mSignalScaleHeight,
-                        -offsetPercent * mSignalScaleWidth,
-                        Constants.MarginTopBottom);
-        });
+          var renderer = new ChannelRenderer(screenPtrStartCh1, Constants.ScreenWidth, Constants.ScreenHeight);
+          renderer.Clear();
+          mSignalAnalyzer.InputSamples(channelSamplesCount, (int* samplesPtr, float offsetPercent) =>
+          {
+            renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
+                          samplesPtr + mSamplesInScreenWidth / 2,
+                          mSignalScaleWidth,
+                          mSignalScaleHeight,
+                          -offsetPercent * mSignalScaleWidth,
+                          Constants.MarginTopBottom);
+          });
+        }
       }
 
       try

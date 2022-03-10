@@ -64,6 +64,7 @@
     </Compile>
     <Compile Include="Oscilloscope\Channel.cs" />
     <Compile Include="Oscilloscope\Constants.cs" />
+    <Compile Include="Oscilloscope\SerialPortChannel.cs" />
     <Compile Include="Screen\ChannelRenderer.cs" />
     <Compile Include="Oscilloscope\SamplesBuffer.cs" />
     <Compile Include="Oscilloscope\SignalAnalyzer.cs" />
