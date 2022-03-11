@@ -45,13 +45,13 @@ namespace loork_gui.Oscilloscope
     //Called when a trigger sample has been found
     //The trigger search algorithm calls the callback only when the TriggerSamplesBeforeCount and TriggerSamplesAfterCount are satisfied
     //The callback code can go forward and backward safely on the pointer by the requested samples count
-    public delegate void OnTriggerCallbackDelegate(int* samplePtr, float offsetPercent);
+    public delegate void OnTriggerCallbackDelegate(float* samplePtr, float offsetPercent);
 
     public void InputSamples(int samplesCount, OnTriggerCallbackDelegate onTriggerCallback)
     {
       var filledBuffer = GetBufferToFill();
       //Start searching for next trigger
-      fixed (int* samplesPtrStart = &filledBuffer.Buffer[filledBuffer.StartIdx])
+      fixed (float* samplesPtrStart = &filledBuffer.Buffer[filledBuffer.StartIdx])
       {
         var lastPtrToSearchTrigger = samplesPtrStart + (samplesCount - mTriggerSamplesAfterCount - 1);
 
@@ -84,7 +84,7 @@ namespace loork_gui.Oscilloscope
               }
               else
               {
-                fixed (int* lastSampledStartPtr = &mLastSamplesBuffer.Buffer[mLastSamplesBuffer.StartIdx + mLastSamplesBufferCount - missingSamples])
+                fixed (float* lastSampledStartPtr = &mLastSamplesBuffer.Buffer[mLastSamplesBuffer.StartIdx + mLastSamplesBufferCount - missingSamples])
                 {
                   var lastSampledPtr = lastSampledStartPtr;
                   var preamblePtr = samplesPtrStart - missingSamples;

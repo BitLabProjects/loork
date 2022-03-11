@@ -83,9 +83,9 @@ namespace loork_gui.Oscilloscope
       unsafe
       {
         var startIdx = bufferToFill.AllocateFillRegionReturnStartIdx(samplesCaptured);
-        fixed (int* bufferStart = &bufferToFill.Buffer[startIdx])
+        fixed (float* bufferStart = &bufferToFill.Buffer[startIdx])
         {
-          int* buffer = bufferStart;
+          var buffer = bufferStart;
           fixed (byte* inputStart = &inputBuffer[0])
           {
             var input = (short*)inputStart;

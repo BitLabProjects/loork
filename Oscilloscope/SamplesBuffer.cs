@@ -8,13 +8,13 @@ namespace loork_gui.Oscilloscope
 {
   unsafe class SamplesBuffer
   {
-    public readonly int[] Buffer;
+    public readonly float[] Buffer;
     public readonly int StartIdx;
     public readonly int Length;
     public int FilledLength;
     public SamplesBuffer(int BufferLength, int PreambleLength)
     {
-      Buffer = new int[BufferLength + PreambleLength];
+      Buffer = new float[BufferLength + PreambleLength];
       StartIdx = PreambleLength;
       Length = BufferLength;
       FilledLength = 0;

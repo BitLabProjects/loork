@@ -11,7 +11,7 @@ namespace loork_gui.Oscilloscope
   {
     private int[] mWave;
 
-    private int mSamplesPerSecond;
+    protected readonly int mSamplesPerSecond;
     private int mSampleCount;
     private Random r = new Random();
 
@@ -39,7 +39,7 @@ namespace loork_gui.Oscilloscope
 
     public int SamplesPerSecond { get { return mSamplesPerSecond; } }
 
-    public void Capture(float secondsPassed, SamplesBuffer bufferToFill, out int samplesCaptured)
+    public virtual void Capture(float secondsPassed, SamplesBuffer bufferToFill, out int samplesCaptured)
     {
       samplesCaptured = (int)(secondsPassed * mSamplesPerSecond);
       if (samplesCaptured > bufferToFill.Length)
@@ -61,10 +61,10 @@ namespace loork_gui.Oscilloscope
       mAudioReader.Read(mReaderBuffer, 0, samplesCaptured*4);
       unsafe
       {
-        fixed (int* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
+        fixed (float* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
         {
-          int* buffer = bufferStart;
-          int* bufferEnd = bufferStart + samplesCaptured;
+          var buffer = bufferStart;
+          var bufferEnd = bufferStart + samplesCaptured;
 
           fixed (byte* waveStart = mReaderBuffer)
           {
@@ -88,10 +88,10 @@ namespace loork_gui.Oscilloscope
     {
       unsafe
       {
-        fixed (int* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
+        fixed (float* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
         {
-          int* buffer = bufferStart;
-          int* bufferEnd = bufferStart + samplesCaptured;
+          var buffer = bufferStart;
+          var bufferEnd = bufferStart + samplesCaptured;
 
           fixed (int* waveStart = mWave)
           {

@@ -32,9 +32,9 @@ namespace loork_gui
         *screenPtr = 0;
     }
 
-    public void Plot(int* samplesPtrStart, int* samplesPtrEnd, 
+    public void Plot(float* samplesPtrStart, float* samplesPtrEnd, 
                      float signalScaleWidth, float signalScaleHeight, 
-                     float offset,
+                     float offsetX,
                      int marginTopBottom)
     {
       var samplesPtr = samplesPtrStart;
@@ -44,9 +44,9 @@ namespace loork_gui
       {
         var currConditionedSample = (*samplesPtr++) * signalScaleHeight + marginTopBottom;
         x++;
-        LineClipX((int)((x - 1) * signalScaleWidth + offset), 
+        LineClipX((int)((x - 1) * signalScaleWidth + offsetX), 
                   (int)prevConditionedSample, 
-                  (int)(x * signalScaleWidth + offset), 
+                  (int)(x * signalScaleWidth + offsetX), 
                   (int)currConditionedSample);
         prevConditionedSample = currConditionedSample;
       }
