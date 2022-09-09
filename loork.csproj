@@ -69,6 +69,7 @@
     <Compile Include="Oscilloscope\SamplesBuffer.cs" />
     <Compile Include="Oscilloscope\SignalAnalyzer.cs" />
     <Compile Include="Screen\HudRenderer.cs" />
+    <Compile Include="Screen\RenderUtils.cs" />
     <Compile Include="Screen\ScreenSurface.cs" />
     <Compile Include="Oscilloscope\LoorkBoard.cs" />
     <Compile Include="ViewModel\UserInterfaceVM.cs" />

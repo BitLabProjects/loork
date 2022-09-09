@@ -43,6 +43,8 @@ namespace loork_gui.Oscilloscope
     const float RefreshIntervalInSec = 1.0f / 30.0f;
     const int Period = (int)(RefreshIntervalInSec * 1000);
 
+    const float SignalSamplesPerVolt = 1024 * 32;
+
     public AudioChannel(string fullFileName) : base()
     {
       //var signalFrequency = 1000.0f;
@@ -113,9 +115,8 @@ namespace loork_gui.Oscilloscope
             while (buffer < bufferEnd)
             {
               var sample = *wave++;
-              sample = (Int16)(sample / 64);
               wave += 1;
-              *buffer++ = 2048 + (sample);
+              *buffer++ = sample / SignalSamplesPerVolt;
             }
           }
         }

@@ -19,7 +19,6 @@ namespace loork_gui.Oscilloscope
     private byte[] mScreenBufferCh1;
     private ScreenSurface mScreenSurface;
     private Dispatcher mDispatcher;
-    private Timer mTimer;
     private bool isCounterStarted;
     private Channel mChannel;
     private QueryPerfCounter counter;
@@ -60,8 +59,6 @@ namespace loork_gui.Oscilloscope
 
       isCounterStarted = false;
       counter = new QueryPerfCounter();
-
-      //mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(Constants.RefreshIntervalInSec * 1000), (int)(Constants.RefreshIntervalInSec * 1000));
     }
 
     #region Properties
@@ -128,7 +125,7 @@ namespace loork_gui.Oscilloscope
       mSignalScaleWidth = Constants.ScreenWidth / (float)(mSamplesInScreenWidth - 1);
       mSignalScaleHeight = (Constants.ScreenHeight - 2 * Constants.MarginTopBottom) / (float)Constants.MaxSignalValue;
 
-      mSignalAnalyzer = new SignalAnalyzer(mSamplesInScreenWidth / 2, mSamplesInScreenWidth / 2, mChannel.SamplesPerSecond, mChannel.NominalSamplesPerBufferFill);
+      mSignalAnalyzer = new SignalAnalyzer(mSamplesInScreenWidth, mChannel.SamplesPerSecond, mChannel.NominalSamplesPerBufferFill);
     }
 
     private void mRenderHud()
@@ -138,9 +135,10 @@ namespace loork_gui.Oscilloscope
         var renderer = new HudRenderer(screenPtrStartHud, Constants.ScreenWidth, Constants.ScreenHeight);
         renderer.Clear();
 
-        var conditionedTrigger = (int)(mSignalAnalyzer.TriggerSample * mSignalScaleHeight + Constants.MarginTopBottom);
-        renderer.Line(0, conditionedTrigger, Constants.ScreenWidth - 1, conditionedTrigger,
-                      100, 100, 100);
+        var conditionedTrigger = (mSignalAnalyzer.TriggerSample - mSignalAnalyzer.SignalScalingToViewport.SignalOffsetY) * mSignalAnalyzer.SignalScalingToViewport.SignalScaleY;
+        var screenTrigger = (int)(conditionedTrigger * Constants.ScreenHeight);
+        renderer.LineRGB(0, screenTrigger, Constants.ScreenWidth - 1, screenTrigger,
+                         100, 100, 100);
 
         //Grid
         var divisionSize = (int)(Constants.ScreenWidth / 10);
@@ -148,8 +146,8 @@ namespace loork_gui.Oscilloscope
         {
           var repetitions = x == 5 ? 3 : 1;
           for (var rep = 0; rep < repetitions; rep++)
-            renderer.Line(x * divisionSize, 0, x * divisionSize, Constants.ScreenHeight,
-                          150, 150, 150);
+            renderer.LineRGB(x * divisionSize, 0, x * divisionSize, Constants.ScreenHeight,
+                             150, 150, 150);
         }
 
         var divisionsFittingHeightCount = Constants.ScreenHeight / divisionSize;
@@ -157,8 +155,8 @@ namespace loork_gui.Oscilloscope
         {
           var repetitions = y == divisionsFittingHeightCount / 2 ? 3 : 1;
           for (var rep = 0; rep < repetitions; rep++)
-            renderer.Line(0, y * divisionSize, Constants.ScreenWidth, y * divisionSize,
-                          150, 150, 150);
+            renderer.LineRGB(0, y * divisionSize, Constants.ScreenWidth, y * divisionSize,
+                             150, 150, 150);
         }
       }
     }
@@ -187,14 +185,15 @@ namespace loork_gui.Oscilloscope
 
       if (mTriggerChanged)
       {
-        mSignalAnalyzer.TriggerSample = mSignalAnalyzer.SignalScalingToViewport.averageValue + (TriggerPercent / 100.0f - 0.5f) * mSignalAnalyzer.SignalScalingToViewport.maxAverageDifference;
+        mSignalAnalyzer.TriggerSample = mSignalAnalyzer.SignalScalingToViewport.minY + 
+                                        (TriggerPercent / 100.0f) * (mSignalAnalyzer.SignalScalingToViewport.maxY - mSignalAnalyzer.SignalScalingToViewport.minY);
         isHudDirty = true;
         mTriggerChanged = false;
       }
 
       // When is the buffer filled enough?
       // -> When it contains enuogh samples to cover the render screen at least once
-      if (samplesBuffer.FilledLength >= mSignalAnalyzer.MinSampleCount)
+      if (samplesBuffer.FilledLength >= mSignalAnalyzer.SamplesPerWindow)
       {
         switch (mSignalAnalyzer.AnalyzeSamples(samplesBuffer.FilledLength))
         {
@@ -221,8 +220,7 @@ namespace loork_gui.Oscilloscope
               renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
                             samplesPtr + mSamplesInScreenWidth / 2,
                             mSignalScaleWidth,
-                            -subsampleOffsetPercent * mSignalScaleWidth,
-                            Constants.MarginTopBottom);
+                            -subsampleOffsetPercent * mSignalScaleWidth);
               screenNeedsRefresh = true;
             });
         }
