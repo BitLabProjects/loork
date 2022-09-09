@@ -23,6 +23,7 @@ namespace loork_gui
     public UserInterfaceVM(LoorkBoard board)
     {
       mBoard = board;
+      mBoard.OnSignalAnalysis += () => Notify(nameof(IsAnalyzingSignal));
       SetTriggerLevelFunctionality = new CDelegateCommand(mSetTriggerLevelFunctionality);
       SetMicrosecondsPerDivisionFunctionality = new CDelegateCommand(mSetMicrosecondsPerDivisionFunctionality);
       UpdateValueFromKnob = new CDelegateCommand(mUpdateValueFromKnob);
@@ -37,6 +38,7 @@ namespace loork_gui
       set { SetAndNotify(ref mCurrentFunctionality, value); }
     }
     public ScreenSurface ScreenSurface { get { return mBoard.ScreenSurface; } }
+    public bool IsAnalyzingSignal => mBoard.IsAnalyzingSignal;
     #endregion
 
     #region Commands
@@ -64,7 +66,7 @@ namespace loork_gui
         mMicrosecondsPerDivisionAccumulator = 0;
       mPrevUpdateValueFromKnobDate = now;
 
-      var delta = (double)arg;
+      var delta = (float)(double)arg;
       switch (CurrentFunctionality)
       {
         case Functionality.TriggerLevel:
@@ -85,7 +87,7 @@ namespace loork_gui
       }
     }
 
-    private double mClamp(double min, double value, double max)
+    private float mClamp(float min, float value, float max)
     {
       return value < min ? min : (value > max ? max : value);
     }

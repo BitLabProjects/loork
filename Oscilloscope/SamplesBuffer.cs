@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace loork_gui.Oscilloscope
 {
-  unsafe class SamplesBuffer
+  public unsafe class SamplesBuffer
   {
     public readonly float[] Buffer;
     public readonly int StartIdx;

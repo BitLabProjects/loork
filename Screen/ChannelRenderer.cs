@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,15 +11,19 @@ namespace loork_gui
   {
     const byte drawOpacity = 1; //(byte)(0.05 * 255); // 30%;
 
-    private byte* mScreenPtrStart;
-    private int mScreenWidth;
-    private int mScreenHeight;
+    private readonly byte* mScreenPtrStart;
+    private readonly byte* mScreenPtrEnd;
+    private readonly int mScreenWidth;
+    private readonly int mScreenHeight;
+    private readonly Oscilloscope.SignalYScaling mSignalScalingToViewport;
 
-    public ChannelRenderer(byte* screenPtrStart, int screenWidth, int screenHeight)
+    public ChannelRenderer(byte* screenPtrStart,int screenWidth, int screenHeight, Oscilloscope.SignalYScaling SignalScalingToViewport)
     {
       mScreenPtrStart = screenPtrStart;
+      mScreenPtrEnd = screenPtrStart + 1 * screenWidth * screenHeight;
       mScreenWidth = screenWidth;
       mScreenHeight = screenHeight;
+      mSignalScalingToViewport = SignalScalingToViewport;
     }
 
     public void Clear()
@@ -33,16 +38,16 @@ namespace loork_gui
     }
 
     public void Plot(float* samplesPtrStart, float* samplesPtrEnd, 
-                     float signalScaleWidth, float signalScaleHeight, 
-                     float offsetX,
+                     float signalScaleWidth, float offsetX, 
                      int marginTopBottom)
     {
       var samplesPtr = samplesPtrStart;
-      var prevConditionedSample = (*samplesPtr++) * signalScaleHeight + marginTopBottom;
+      var scaleFactor = 1.0f / mSignalScalingToViewport.maxAverageDifference;
+      var prevConditionedSample = ((*samplesPtr++) - mSignalScalingToViewport.averageValue) * scaleFactor * (mScreenHeight / 2 - marginTopBottom * 2) + mScreenHeight / 2;
       var x = 0;
       while (samplesPtr < samplesPtrEnd)
       {
-        var currConditionedSample = (*samplesPtr++) * signalScaleHeight + marginTopBottom;
+        var currConditionedSample = ((*samplesPtr++) - mSignalScalingToViewport.averageValue) * scaleFactor * (mScreenHeight / 2 - marginTopBottom * 2) + mScreenHeight / 2;
         x++;
         LineClipX((int)((x - 1) * signalScaleWidth + offsetX), 
                   (int)prevConditionedSample, 
@@ -68,6 +73,10 @@ namespace loork_gui
         y2 = y1 + (y2 - y1) * (mScreenWidth-1 - x1) / (x2 - x1);
         x2 = mScreenWidth-1;
       }
+
+      if (y1 < 0 || y1 >= mScreenHeight || y2 < 0 || y2 >= mScreenHeight)
+        return;
+
       Line(x1, y1, x2, y2);
     }
 
@@ -125,7 +134,8 @@ namespace loork_gui
 
 #if DEBUG
         if (k == -b - 1)
-          System.Diagnostics.Debug.Assert(pixelPtr == mScreenPtrStart + x2 * mScreenHeight + y2);
+          Debug.Assert(pixelPtr == mScreenPtrStart + x2 * mScreenHeight + y2);
+        Debug.Assert(pixelPtr >= mScreenPtrStart && pixelPtr < mScreenPtrEnd);
 #endif
 
         //draw pixel

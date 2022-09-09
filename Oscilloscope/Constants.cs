@@ -12,7 +12,7 @@ namespace loork_gui.Oscilloscope
     public const int ScreenHeight = 240;
 
     public const float RefreshIntervalInSec = 1.0f / 30.0f;
-    public const int SamplesPerSecond = 44100;// (int)(10 * OneMillion);
+    public const int SamplesPerSecond = 44100;
     public const int MarginTopBottom = 10;
     public const int MaxSignalValue = 4096;
     public static readonly int[] TimebaseSteps = new int[] {

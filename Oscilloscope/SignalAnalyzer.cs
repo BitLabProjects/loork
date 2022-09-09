@@ -6,6 +6,19 @@ using System.Threading.Tasks;
 
 namespace loork_gui.Oscilloscope
 {
+  struct SignalYScaling
+  {
+    public float averageValue;
+    public float maxAverageDifference;
+  }
+
+  enum SignalAnalysisResult
+  {
+    NoAnalysisNeeded = 0,
+    AnalysisInProgress = 1,
+    AnalysisCompleted = 2,
+  }
+
   unsafe class SignalAnalyzer
   {
     private SamplesBuffer mSamplesBuffer1;
@@ -14,23 +27,34 @@ namespace loork_gui.Oscilloscope
     private int mLastSamplesBufferCount;
     private int mTriggerSamplesBeforeCount;
     private int mTriggerSamplesAfterCount;
-    private int mTriggerSample;
+    private int mConditioningSamplesCount;
+    private float mConditioningMinValue;
+    private float mConditioningMaxValue;
+    private SignalYScaling mSignalScalingToViewport;
 
     public SignalAnalyzer(int triggerSamplesBeforeCount,
                           int triggerSamplesAfterCount,
-                          double triggerPercent)
+                          int samplesPerSecond,
+                          int bufferSize)
     {
-      const int BufferSize = 4000;
-      mSamplesBuffer1 = new SamplesBuffer(BufferSize, triggerSamplesBeforeCount);
-      mSamplesBuffer2 = new SamplesBuffer(BufferSize, triggerSamplesBeforeCount);
+      mSamplesBuffer1 = new SamplesBuffer(bufferSize, 0);
+      mSamplesBuffer2 = new SamplesBuffer(bufferSize, 0);
       mLastSamplesBuffer = mSamplesBuffer2;//Start with buffer 2 so the buffer 1 is the first one filled
       mLastSamplesBufferCount = 0;
       mTriggerSamplesBeforeCount = triggerSamplesBeforeCount;
       mTriggerSamplesAfterCount = triggerSamplesAfterCount;
-      mTriggerSample = (int)(triggerPercent / 100 * Constants.MaxSignalValue);
+      TriggerSample = 0;
+      mConditioningSamplesCount = samplesPerSecond;
+      mConditioningMinValue = float.MaxValue;
+      mConditioningMaxValue = float.MinValue;
+      mSignalScalingToViewport.averageValue = 0;
+      mSignalScalingToViewport.maxAverageDifference = 4096;
     }
 
-    public int TriggerSample { get { return mTriggerSample; } }
+    public float TriggerSample;
+
+    public SignalYScaling SignalScalingToViewport => mSignalScalingToViewport;
+    public bool IsAnalyzing => mConditioningSamplesCount > 0;
 
     public int MinSampleCount { get { return mTriggerSamplesBeforeCount + mTriggerSamplesAfterCount; } }
 
@@ -40,6 +64,47 @@ namespace loork_gui.Oscilloscope
         return mSamplesBuffer2;
       else
         return mSamplesBuffer1;
+    }
+
+    public void SwitchBuffers()
+    {
+      mLastSamplesBuffer = GetBufferToFill();
+      GetBufferToFill().FilledLength = 0;
+    }
+
+    public SignalAnalysisResult AnalyzeSamples(int samplesCount)
+    {
+      // If we're not done with auto conditioning calc, do it
+      if (mConditioningSamplesCount > 0)
+      {
+        var filledBuffer = GetBufferToFill();
+        //Start searching for next trigger
+        fixed (float* samplesPtrStart = &filledBuffer.Buffer[filledBuffer.StartIdx])
+        {
+          var lastSamplesPtrForConditioning = samplesPtrStart + Math.Min(samplesCount, mConditioningSamplesCount);
+          var samplesPtrCond = samplesPtrStart;
+          while (samplesPtrCond != lastSamplesPtrForConditioning)
+          {
+            var sample = *samplesPtrCond;
+            mConditioningMinValue = Math.Min(sample, mConditioningMinValue);
+            mConditioningMaxValue = Math.Max(sample, mConditioningMaxValue);
+
+            samplesPtrCond++;
+            mConditioningSamplesCount--;
+            if (mConditioningSamplesCount == 0)
+            {
+              // Actually calculate the offset-scale to bring the signal to -1, +1 interval
+              mSignalScalingToViewport.averageValue = (mConditioningMaxValue + mConditioningMinValue) * 0.5f;
+              mSignalScalingToViewport.maxAverageDifference = (mConditioningMaxValue - mConditioningMinValue) * 0.5f;
+              TriggerSample = mSignalScalingToViewport.averageValue;
+              return SignalAnalysisResult.AnalysisCompleted;
+            }
+          }
+        }
+        return SignalAnalysisResult.AnalysisInProgress;
+      }
+
+      return SignalAnalysisResult.NoAnalysisNeeded;
     }
 
     //Called when a trigger sample has been found
@@ -59,7 +124,7 @@ namespace loork_gui.Oscilloscope
         //Search the first sample below the trigger point
         while (samplesPtr != lastPtrToSearchTrigger)
         {
-          if (*samplesPtr < mTriggerSample)
+          if (*samplesPtr < TriggerSample)
           {
             break;
           }
@@ -68,7 +133,7 @@ namespace loork_gui.Oscilloscope
 
         while (samplesPtr != lastPtrToSearchTrigger)
         {
-          if (*samplesPtr > mTriggerSample)
+          if (*samplesPtr > TriggerSample)
           {
             var skipTrigger = false;
             //You always have mTriggerSamplesAfterCount leftover samples from the previous run (Except for the first one)
@@ -88,7 +153,7 @@ namespace loork_gui.Oscilloscope
                 {
                   var lastSampledPtr = lastSampledStartPtr;
                   var preamblePtr = samplesPtrStart - missingSamples;
-                  while(preamblePtr < samplesPtrStart)
+                  while (preamblePtr < samplesPtrStart)
                   {
                     *preamblePtr++ = *lastSampledPtr++;
                   }
@@ -102,7 +167,7 @@ namespace loork_gui.Oscilloscope
               var sample = *samplesPtr;
               var prevSample = *(samplesPtr - 1);
               //-0.5f found by empirical programming
-              var offsetPercent = ((float)mTriggerSample - prevSample) / (sample - prevSample) - 0.5f;
+              var offsetPercent = ((float)TriggerSample - prevSample) / (sample - prevSample) - 0.5f;
 
               onTriggerCallback(samplesPtr, offsetPercent);
             }
@@ -110,7 +175,7 @@ namespace loork_gui.Oscilloscope
             //Discard samples still above the trigger, do avoid triggering by mistake.
             while (samplesPtr != lastPtrToSearchTrigger)
             {
-              if (*samplesPtr < mTriggerSample)
+              if (*samplesPtr < TriggerSample)
               {
                 break;
               }
@@ -123,9 +188,7 @@ namespace loork_gui.Oscilloscope
           }
         }
       }
-      filledBuffer.FilledLength = 0;
-      mLastSamplesBuffer = filledBuffer;
-      mLastSamplesBufferCount = samplesCount;
+      mLastSamplesBufferCount = 0;
     }
   }
 }

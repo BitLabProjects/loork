@@ -27,13 +27,18 @@ namespace loork_gui.Oscilloscope
     private SignalAnalyzer mSignalAnalyzer;
 
     //User settings
-    private double mTriggerPercent;
+    private float mTriggerPercent;
+    private bool mTriggerChanged;
     private int mMicrosecondsPerDivision;
     private bool mSettingsChanged;
     //Calculated values from user settings
     private int mSamplesInScreenWidth;
     private float mSignalScaleWidth;
     private float mSignalScaleHeight;
+    //Internal state info for events
+    private bool mIsAnalyzingSignal;
+
+    public event Action OnSignalAnalysis;
 
     public LoorkBoard(Dispatcher dispatcher)
     {
@@ -45,20 +50,22 @@ namespace loork_gui.Oscilloscope
       mTriggerPercent = 50;
       mMicrosecondsPerDivision = 100;
       mSettingsChanged = true;
+      mIsAnalyzingSignal = false;
 
-      //mChannel = new Channel(Constants.SamplesPerSecond);
-      var spc= new SerialPortChannel(100, "COM4");
-      spc.TryOpen();
-      mChannel = spc;
+      mChannel = new AudioChannel("..\\..\\in_the_raw.mp3");
+      mChannel.BufferFilledEvent += mChannel_SamplesPerSecond;
+      //var spc= new SerialPortChannel(100, "COM4");
+      //spc.TryOpen();
+      //mChannel = spc;
 
       isCounterStarted = false;
       counter = new QueryPerfCounter();
 
-      mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(Constants.RefreshIntervalInSec * 1000), (int)(Constants.RefreshIntervalInSec * 1000));
+      //mTimer = new System.Threading.Timer(mTimer_Tick, null, (int)(Constants.RefreshIntervalInSec * 1000), (int)(Constants.RefreshIntervalInSec * 1000));
     }
 
     #region Properties
-    public double TriggerPercent
+    public float TriggerPercent
     {
       get
       {
@@ -67,7 +74,7 @@ namespace loork_gui.Oscilloscope
       set
       {
         mTriggerPercent = value;
-        mSettingsChanged = true;
+        mTriggerChanged = true;
       }
     }
     public int MicrosecondsPerDivision
@@ -80,6 +87,13 @@ namespace loork_gui.Oscilloscope
       {
         mMicrosecondsPerDivision = value;
         mSettingsChanged = true;
+      }
+    }
+    public bool IsAnalyzingSignal
+    {
+      get
+      {
+        return mIsAnalyzingSignal;
       }
     }
     #endregion
@@ -114,7 +128,7 @@ namespace loork_gui.Oscilloscope
       mSignalScaleWidth = Constants.ScreenWidth / (float)(mSamplesInScreenWidth - 1);
       mSignalScaleHeight = (Constants.ScreenHeight - 2 * Constants.MarginTopBottom) / (float)Constants.MaxSignalValue;
 
-      mSignalAnalyzer = new SignalAnalyzer(mSamplesInScreenWidth / 2, mSamplesInScreenWidth / 2, TriggerPercent);
+      mSignalAnalyzer = new SignalAnalyzer(mSamplesInScreenWidth / 2, mSamplesInScreenWidth / 2, mChannel.SamplesPerSecond, mChannel.NominalSamplesPerBufferFill);
     }
 
     private void mRenderHud()
@@ -149,6 +163,103 @@ namespace loork_gui.Oscilloscope
       }
     }
 
+    private SamplesBuffer mChannel_SamplesPerSecond(Channel sender, SamplesBuffer samplesBuffer)
+    {
+      if (samplesBuffer == null)
+      {
+        Debug.Assert(mSettingsChanged);
+      }
+
+      var screenNeedsRefresh = false;
+      var isHudDirty = false;
+      if (mSettingsChanged)
+      {
+        Create();
+        isHudDirty = true;
+        mSettingsChanged = false;
+      }
+
+      if (samplesBuffer == null)
+      {
+        // First call, just return the buffer that was created in Create()
+        return mSignalAnalyzer.GetBufferToFill();
+      }
+
+      if (mTriggerChanged)
+      {
+        mSignalAnalyzer.TriggerSample = mSignalAnalyzer.SignalScalingToViewport.averageValue + (TriggerPercent / 100.0f - 0.5f) * mSignalAnalyzer.SignalScalingToViewport.maxAverageDifference;
+        isHudDirty = true;
+        mTriggerChanged = false;
+      }
+
+      // When is the buffer filled enough?
+      // -> When it contains enuogh samples to cover the render screen at least once
+      if (samplesBuffer.FilledLength >= mSignalAnalyzer.MinSampleCount)
+      {
+        switch (mSignalAnalyzer.AnalyzeSamples(samplesBuffer.FilledLength))
+        {
+          case SignalAnalysisResult.NoAnalysisNeeded:
+            break;
+
+          case SignalAnalysisResult.AnalysisInProgress:
+            break;
+
+          case SignalAnalysisResult.AnalysisCompleted:
+            isHudDirty = true; // The trigger has changed, show it
+            break;
+        }
+
+        fixed (byte* screenPtrStartCh1 = mScreenBufferCh1)
+        {
+          var renderer = new ChannelRenderer(screenPtrStartCh1,
+                                             Constants.ScreenWidth, Constants.ScreenHeight,
+                                             mSignalAnalyzer.SignalScalingToViewport);
+          renderer.Clear();
+          mSignalAnalyzer.InputSamples(samplesBuffer.FilledLength,
+            (float* samplesPtr, float subsampleOffsetPercent) =>
+            {
+              renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
+                            samplesPtr + mSamplesInScreenWidth / 2,
+                            mSignalScaleWidth,
+                            -subsampleOffsetPercent * mSignalScaleWidth,
+                            Constants.MarginTopBottom);
+              screenNeedsRefresh = true;
+            });
+        }
+
+        mSignalAnalyzer.SwitchBuffers();
+      }
+
+      if (isHudDirty)
+      {
+        mRenderHud();
+        screenNeedsRefresh = true;
+      }
+
+      if (screenNeedsRefresh)
+      {
+        try
+        {
+          mDispatcher.Invoke(() => mScreenSurface.RefreshAll());
+        }
+        catch (TaskCanceledException)
+        {
+          //Well... uh
+        }
+      }
+
+      if (mIsAnalyzingSignal != mSignalAnalyzer.IsAnalyzing)
+      {
+        mIsAnalyzingSignal = mSignalAnalyzer.IsAnalyzing;
+        if (OnSignalAnalysis != null)
+        {
+          OnSignalAnalysis();
+        }
+      }
+
+      return mSignalAnalyzer.GetBufferToFill();
+    }
+
     private void mTimer_Tick(object state)
     {
       if (!isCounterStarted)
@@ -169,46 +280,66 @@ namespace loork_gui.Oscilloscope
       var elapsedSeconds = (float)(counter.Duration(1) / 1000000000.0f);
       counter.Start();
 
-      if (mSettingsChanged)
-      {
-        Create();
-        mRenderHud();
-        mSettingsChanged = false;
-      }
+      /*
+            var isHudDirty = false;
+            if (mSettingsChanged)
+            {
+              Create();
+              isHudDirty = true;
+              mSettingsChanged = false;
+            }
 
-      int channelSamplesCount;
-      var samplesBuffer = mSignalAnalyzer.GetBufferToFill();
-      mChannel.Capture(elapsedSeconds, samplesBuffer, out channelSamplesCount);
+            if (mTriggerChanged)
+            {
+              mSignalAnalyzer.TriggerSample = mSignalAnalyzer.SignalScalingToViewport.averageValue + (TriggerPercent / 100.0f - 0.5f) * mSignalAnalyzer.SignalScalingToViewport.maxAverageDifference;
+              isHudDirty = true;
+              mTriggerChanged = false;
+            }
 
-      // TODO Move away from here
-      Debug.Assert(samplesBuffer.Length >= mSignalAnalyzer.MinSampleCount, "The buffer must be larger than the minimum samples length");
+            if (isHudDirty)
+            {
+              mRenderHud();
+            }
 
-      if (samplesBuffer.FilledLength >= mSignalAnalyzer.MinSampleCount)
-      {
-        fixed (byte* screenPtrStartCh1 = mScreenBufferCh1)
-        {
-          var renderer = new ChannelRenderer(screenPtrStartCh1, Constants.ScreenWidth, Constants.ScreenHeight);
-          renderer.Clear();
-          mSignalAnalyzer.InputSamples(samplesBuffer.FilledLength, (float* samplesPtr, float offsetPercent) =>
-          {
-            renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
-                          samplesPtr + mSamplesInScreenWidth / 2,
-                          mSignalScaleWidth,
-                          mSignalScaleHeight,
-                          -offsetPercent * mSignalScaleWidth,
-                          Constants.MarginTopBottom);
-          });
-        }
-      }
+            int channelSamplesCount;
+            var samplesBuffer = mSignalAnalyzer.GetBufferToFill();
+            mChannel.Capture(elapsedSeconds, samplesBuffer, out channelSamplesCount);
 
-      try
-      {
-        mDispatcher.Invoke(() => mScreenSurface.RefreshAll());
-      }
-      catch (TaskCanceledException)
-      {
-        //Well... uh
-      }
+            // TODO Move away from here
+            Debug.Assert(samplesBuffer.Length >= mSignalAnalyzer.MinSampleCount, "The buffer must be larger than the minimum samples length");
+
+            if (samplesBuffer.FilledLength >= mSignalAnalyzer.MinSampleCount)
+            {
+              if (mSignalAnalyzer.AnalyzeSamples(samplesBuffer.FilledLength))
+              {
+                fixed (byte* screenPtrStartCh1 = mScreenBufferCh1)
+                {
+                  var renderer = new ChannelRenderer(screenPtrStartCh1, 
+                                                     Constants.ScreenWidth, Constants.ScreenHeight, 
+                                                     mSignalAnalyzer.SignalScalingToViewport);
+                  renderer.Clear();
+                  mSignalAnalyzer.InputSamples(samplesBuffer.FilledLength, 
+                    (float* samplesPtr, float subsampleOffsetPercent) =>
+                    {
+                      renderer.Plot(samplesPtr - mSamplesInScreenWidth / 2,
+                                    samplesPtr + mSamplesInScreenWidth / 2,
+                                    mSignalScaleWidth,
+                                    -subsampleOffsetPercent * mSignalScaleWidth,
+                                    Constants.MarginTopBottom);
+                    });
+                }
+              }
+            }
+
+            try
+            {
+              mDispatcher.Invoke(() => mScreenSurface.RefreshAll());
+            }
+            catch (TaskCanceledException)
+            {
+              //Well... uh
+            }
+      */
       isWorking = false;
     }
   }

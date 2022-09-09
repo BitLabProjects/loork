@@ -16,8 +16,9 @@ namespace loork_gui.Oscilloscope
     private readonly StopBits mStopBits;
     private readonly Parity mParity;
     private SerialPort mPort;
+    private SamplesBuffer mSamplesBuffer;
 
-    public SerialPortChannel(int samplesPerSecond, string portName): base(samplesPerSecond)
+    public SerialPortChannel(int samplesPerSecond, string portName): base()
     {
       mPortName = portName;
       mBaudRate = 115200;
@@ -25,6 +26,10 @@ namespace loork_gui.Oscilloscope
       mStopBits = StopBits.One;
       mParity = Parity.None;
     }
+
+    public override int SamplesPerSecond => 100;
+    public override int NominalSamplesPerBufferFill => (int)(SamplesPerSecond * 1.0f);
+
 
     public bool TryOpen()
     {
@@ -45,12 +50,16 @@ namespace loork_gui.Oscilloscope
 
     private void port_DataReceived(object sender, SerialDataReceivedEventArgs e)
     {
-      //dataReadCallback(port.ReadExisting());
-      
+      if (mSamplesBuffer != null)
+      {
+        AudioCapture(mSamplesBuffer);
+      }
+
+      mSamplesBuffer = RaiseBufferFilledEvent(mSamplesBuffer);
+
     }
 
-    public override void Capture(float secondsPassed, SamplesBuffer bufferToFill, out int samplesCaptured)
-    {
+    public void AudioCapture(SamplesBuffer bufferToFill) { 
       var bytesToRead = mPort.BytesToRead;
       if (bytesToRead % 2 == 1)
       {
@@ -58,7 +67,6 @@ namespace loork_gui.Oscilloscope
       }
       if (bytesToRead < 2)
       {
-        samplesCaptured = 0;
         return;
       }
 
@@ -71,7 +79,7 @@ namespace loork_gui.Oscilloscope
         throw new InvalidOperationException("Less bytes recevived than expected");
       }
 
-      samplesCaptured = bytesToRead / 2;
+      var samplesCaptured = bytesToRead / 2;
       //if (bufferToFill.StartIdx + samplesCaptured > bufferToFill.Buffer.Length)
       if (samplesCaptured > bufferToFill.AvailableLength)
       {
@@ -92,7 +100,7 @@ namespace loork_gui.Oscilloscope
             var inputEnd = input + samplesCaptured;
             while (input < inputEnd)
             {
-              *buffer = (*input) >> 3;
+              *buffer = *input;
               buffer++;
               input++;
             }

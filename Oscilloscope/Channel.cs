@@ -3,65 +3,104 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace loork_gui.Oscilloscope
 {
-  class Channel
+  public class Channel
   {
-    private int[] mWave;
-
-    protected readonly int mSamplesPerSecond;
-    private int mSampleCount;
-    private Random r = new Random();
-
-    private byte[] mReaderBuffer;
-    private Mp3FileReader mAudioReader;
-
-    public Channel(int samplesPerSecond)
+    public Channel()
     {
-      mSamplesPerSecond = samplesPerSecond;
-
-      mReaderBuffer = new byte[samplesPerSecond*4];
-
-      var signalFrequency = 1000.0f;
-      var signalsSamplesPerPeriod = (int)(SamplesPerSecond / signalFrequency);
-      mWave = new int[signalsSamplesPerPeriod];
-      for (int i = 0; i < mWave.Length; i++)
-      {
-        float t = (float)(i) / mWave.Length;
-        mWave[i] = (int)(2048 + 1800 * Math.Sin(2 * Math.PI * t));
-      }
-
-      mAudioReader = new Mp3FileReader("..\\..\\in_the_raw.mp3");
-      //mAudioReader = new Mp3FileReader("..\\..\\chirp.mp3");
     }
 
-    public int SamplesPerSecond { get { return mSamplesPerSecond; } }
-
-    public virtual void Capture(float secondsPassed, SamplesBuffer bufferToFill, out int samplesCaptured)
+    public delegate SamplesBuffer BufferFilledHandler(Channel sender, SamplesBuffer e);
+    public event BufferFilledHandler BufferFilledEvent;
+    protected SamplesBuffer RaiseBufferFilledEvent(SamplesBuffer samplesBuffer)
     {
-      samplesCaptured = (int)(secondsPassed * mSamplesPerSecond);
-      if (samplesCaptured > bufferToFill.Length)
+      if (BufferFilledEvent != null)
+      {
+        return BufferFilledEvent(this, samplesBuffer);
+      } else
+      {
+        return null;
+      }
+    }
+
+    public virtual int SamplesPerSecond { get; }
+    public virtual int NominalSamplesPerBufferFill { get; }
+  }
+
+  public class AudioChannel : Channel
+  {
+    private byte[] mReaderBuffer;
+    private Mp3FileReader mAudioReader;
+    private Timer mTimer;
+    private bool mTimerIsWorking;
+    //private int[] mWave;
+    private SamplesBuffer mSamplesBuffer;
+
+    const float RefreshIntervalInSec = 1.0f / 30.0f;
+    const int Period = (int)(RefreshIntervalInSec * 1000);
+
+    public AudioChannel(string fullFileName) : base()
+    {
+      //var signalFrequency = 1000.0f;
+      //var signalsSamplesPerPeriod = (int)(SamplesPerSecond / signalFrequency);
+      //mWave = new int[signalsSamplesPerPeriod];
+      //for (int i = 0; i < mWave.Length; i++)
+      //{
+      //  float t = (float)(i) / mWave.Length;
+      //  mWave[i] = (int)(2048 + 1800 * Math.Sin(2 * Math.PI * t));
+      //}
+
+      mAudioReader = new Mp3FileReader(fullFileName);
+      //mAudioReader = new Mp3FileReader("..\\..\\chirp.mp3");
+      mReaderBuffer = new byte[mAudioReader.Mp3WaveFormat.SampleRate * 4];
+      mTimer = new Timer(mTimer_Tick, null, Period, Period);
+    }
+
+    public override int SamplesPerSecond => mAudioReader.Mp3WaveFormat.SampleRate;
+    public override int NominalSamplesPerBufferFill => (int)(SamplesPerSecond * RefreshIntervalInSec);
+
+    private void mTimer_Tick(object state)
+    {
+      if (mTimerIsWorking)
+      {
+        Console.WriteLine("Reentrancy avoided");
+        return;
+      }
+      mTimerIsWorking = true;
+
+      if (mSamplesBuffer != null)
+      {
+        AudioCapture(mSamplesBuffer);
+      }
+
+      mSamplesBuffer = RaiseBufferFilledEvent(mSamplesBuffer);
+
+      mTimerIsWorking = false;
+    }
+
+    public void AudioCapture(SamplesBuffer bufferToFill)
+    {
+      var samplesCaptured = Math.Min(NominalSamplesPerBufferFill, bufferToFill.AvailableLength);
+
+      if (samplesCaptured == 0)
       {
         //throw new ArgumentException("Too much time passed, not enough buffer");
         Console.WriteLine("Overflow");
-        samplesCaptured = bufferToFill.Length;
+        return;
       }
 
-      Capture_AudioFile(bufferToFill, samplesCaptured);
-      //Capture_SineWave(bufferToFill, samplesCaptured);
-    }
-
-    public void Capture_AudioFile(SamplesBuffer bufferToFill, int samplesCaptured)
-    {
       if (mAudioReader.Position > mAudioReader.Length - samplesCaptured * 4)
         mAudioReader.Position = 0;
       //*4 because the audio is 2 channel 16 bit
-      mAudioReader.Read(mReaderBuffer, 0, samplesCaptured*4);
+      var readCount = mAudioReader.Read(mReaderBuffer, 0, samplesCaptured * 4);
       unsafe
       {
-        fixed (float* bufferStart = &bufferToFill.Buffer[bufferToFill.StartIdx])
+        var startIdx = bufferToFill.AllocateFillRegionReturnStartIdx(samplesCaptured);
+        fixed (float* bufferStart = &bufferToFill.Buffer[startIdx])
         {
           var buffer = bufferStart;
           var bufferEnd = bufferStart + samplesCaptured;
@@ -83,6 +122,7 @@ namespace loork_gui.Oscilloscope
       }
     }
 
+    /*
     private long mWaveInitialOffset;
     public void Capture_SineWave(SamplesBuffer bufferToFill, int samplesCaptured)
     {
@@ -117,5 +157,6 @@ namespace loork_gui.Oscilloscope
         }
       }
     }
+    */
   }
 }
